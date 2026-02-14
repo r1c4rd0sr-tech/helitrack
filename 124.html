@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Monitoramento de Helicópteros - Espaço Aéreo Nacional</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 i {
+            color: #667eea;
+        }
+
+        .status-badge {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge i {
+            font-size: 10px;
+        }
+
+        .api-status {
+            background: #17a2b8;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .no-data-badge {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filters-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .filter-group input, .filter-group select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #fd7e14;
+            color: white;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-info h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-info p {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .map-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .helicopters-grid {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .grid-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .grid-header h2 {
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .refresh-btn {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .helicopter-icon {
+            color: #667eea;
+        }
+
+        .altitude-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .altitude-high {
+            background: #dc3545;
+        }
+
+        .altitude-medium {
+            background: #ffc107;
+        }
+
+        .altitude-low {
+            background: #28a745;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading i {
+            font-size: 40px;
+            color: #667eea;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .info-message {
+            background: #cce5ff;
+            color: #004085;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .info-message.show {
+            display: block;
+        }
+
+        .debug-info {
+            background: #e2e3e5;
+            color: #383d41;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: white;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i class="fas fa-helicopter"></i>
+                Monitoramento de Helicópteros - Espaço Aéreo Nacional
+            </h1>
+            <div style="display: flex; gap: 10px;">
+                <div class="status-badge">
+                    <i class="fas fa-circle"></i>
+                    Apenas Dados Reais
+                </div>
+                <div class="api-status" id="apiStatus">
+                    <i class="fas fa-plug"></i>
+                    Verificando API...
+                </div>
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+        <div class="info-message" id="infoMessage"></div>
+        <div class="debug-info" id="debugInfo"></div>
+
+        <div class="filters-section">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label><i class="fas fa-search"></i> Número do Voo</label>
+                    <input type="text" id="flightNumber" placeholder="Ex: KL1395">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-map-marker-alt"></i> Aeroporto de Partida</label>
+                    <input type="text" id="departureAirport" placeholder="Código ICAO (ex: SBGR)">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-flag-checkered"></i> Aeroporto de Chegada</label>
+                    <input type="text" id="arrivalAirport" placeholder="Código ICAO (ex: SBSP)">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-calendar"></i> Data</label>
+                    <input type="date" id="flightDate">
+                </div>
+            </div>
+            <div class="filter-buttons">
+                <button class="btn btn-primary" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i> Aplicar Filtros
+                </button>
+                <button class="btn btn-secondary" onclick="resetFilters()">
+                    <i class="fas fa-undo"></i> Limpar Filtros
+                </button>
+                <button class="btn btn-warning" onclick="testAPIConnection()">
+                    <i class="fas fa-vial"></i> Testar API
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(102, 126, 234, 0.1); color: #667eea;">
+                    <i class="fas fa-helicopter"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Total de Helicópteros</h3>
+                    <p id="totalHelicopters">0</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(40, 167, 69, 0.1); color: #28a745;">
+                    <i class="fas fa-plane-arrival"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Em Voo</h3>
+                    <p id="inFlight">0</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(255, 193, 7, 0.1); color: #ffc107;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Altitude Média</h3>
+                    <p id="avgAltitude">0 pés</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(220, 53, 69, 0.1); color: #dc3545;">
+                    <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Velocidade Média</h3>
+                    <p id="avgSpeed">0 nós</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <div class="helicopters-grid">
+            <div class="grid-header">
+                <h2>
+                    <i class="fas fa-list"></i>
+                    Helicópteros Monitorados (Apenas Dados Reais)
+                </h2>
+                <button class="refresh-btn" onclick="fetchRealHelicopterData()">
+                    <i class="fas fa-sync-alt"></i>
+                    Atualizar Dados
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table id="helicoptersTable">
+                    <thead>
+                        <tr>
+                            <th>Identificação</th>
+                            <th>Modelo</th>
+                            <th>Empresa</th>
+                            <th>Altitude</th>
+                            <th>Velocidade</th>
+                            <th>Direção</th>
+                            <th>Origem</th>
+                            <th>Destino</th>
+                            <th>Status</th>
+                            <th>Última Atualização</th>
+                        </tr>
+                    </thead>
+                    <tbody id="helicoptersTableBody">
+                        <tr>
+                            <td colspan="10" class="loading">
+                                <i class="fas fa-spinner"></i>
+                                <p>Conectando à API para dados reais...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2024 - Sistema de Monitoramento Aéreo | <a href="#" onclick="showCredentials()">Credenciais API</a> | <a href="#" onclick="toggleDebug()">Debug</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Configuração da API - SEM DADOS SIMULADOS
+        const API_CONFIG = {
+            key: '9ee389d1afmsh55b40aa65b59156p139fcejsn446c2093e3ec',
+            host: 'aerodatabox.p.rapidapi.com',
+            baseUrl: 'https://aerodatabox.p.rapidapi.com'
+        };
+
+        // Lista de aeroportos brasileiros para busca
+        const BRAZILIAN_AIRPORTS = [
+            'SBGR', // Guarulhos
+            'SBSP', // Congonhas
+            'SBRJ', // Santos Dumont
+            'SBGL', // Galeão
+            'SBBR', // Brasília
+            'SBCT', // Curitiba
+            'SBPA', // Porto Alegre
+            'SBCF', // Confins
+            'SBSV', // Salvador
+            'SBRF', // Recife
+            'SBFZ', // Fortaleza
+            'SBEG', // Manaus
+            'SBBE'  // Belém
+        ];
+
+        // Estado da aplicação
+        let helicopters = [];
+        let map;
+        let markers = [];
+        let lastUpdateTime = null;
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            testAPIConnection();
+        });
+
+        async function testAPIConnection() {
+            showDebug('Testando conexão com a API...');
+            
+            try {
+                // Teste com endpoint de aeroporto
+                const response = await fetch(`${API_CONFIG.baseUrl}/airports/icao/SBGR`, {
+                    method: 'GET',
+                    headers: {
+                        'x-rapidapi-key': API_CONFIG.key,
+                        'x-rapidapi-host': API_CONFIG.host
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data && data.icao) {
+                    document.getElementById('apiStatus').innerHTML = '<i class="fas fa-check-circle"></i> API Conectada';
+                    document.getElementById('apiStatus').style.background = '#28a745';
+                    showSuccess('Conexão com API estabelecida!');
+                    showDebug('API respondeu: ' + data.icao + ' - ' + data.shortName);
+                    
+                    // Buscar dados reais
+                    fetchRealHelicopterData();
+                } else {
+                    throw new Error('Resposta inválida da API');
+                }
+            } catch (error) {
+                console.error('Erro no teste:', error);
+                document.getElementById('apiStatus').innerHTML = '<i class="fas fa-exclamation-triangle"></i> API Indisponível';
+                document.getElementById('apiStatus').style.background = '#dc3545';
+                showError('API não respondeu. Verifique sua conexão e credenciais.');
+                showDebug('Erro detalhado: ' + error.toString());
+                
+                // Não usar dados simulados - mostrar mensagem clara
+                showNoDataMessage();
+            }
+        }
+
+        function showNoDataMessage() {
+            const tbody = document.getElementById('helicoptersTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" style="text-align: center; padding: 60px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #dc3545; margin-bottom: 20px;"></i>
+                        <h3 style="color: #dc3545; margin-bottom: 10px;">API Indisponível</h3>
+                        <p style="color: #666; margin-bottom: 20px;">Não foi possível obter dados da API. Apenas dados reais são exibidos.</p>
+                        <button class="btn btn-primary" onclick="testAPIConnection()">
+                            <i class="fas fa-sync-alt"></i> Tentar Novamente
+                        </button>
+                    </td>
+                </tr>
+            `;
+            
+            document.getElementById('totalHelicopters').textContent = '0';
+            document.getElementById('inFlight').textContent = '0';
+            document.getElementById('avgAltitude').textContent = '0 pés';
+            document.getElementById('avgSpeed').textContent = '0 nós';
+        }
+
+        function initMap() {
+            map = L.map('map').setView([-15.7801, -47.9292], 4);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        function clearMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+        }
+
+        async function fetchRealHelicopterData() {
+            showLoading(true);
+            clearMarkers();
+            
+            try {
+                const flightNumber = document.getElementById('flightNumber').value;
+                const departureAirport = document.getElementById('departureAirport').value;
+                const arrivalAirport = document.getElementById('arrivalAirport').value;
+                const flightDate = document.getElementById('flightDate').value;
+                
+                let allFlights = [];
+                
+                // Caso 1: Busca por número de voo específico
+                if (flightNumber) {
+                    showDebug(`Buscando voo específico: ${flightNumber}`);
+                    const flights = await fetchFlightByNumber(flightNumber, flightDate);
+                    allFlights = [...allFlights, ...flights];
+                } 
+                // Caso 2: Busca por aeroporto de origem
+                else if (departureAirport) {
+                    showDebug(`Buscando voos do aeroporto: ${departureAirport}`);
+                    const flights = await fetchAirportFlights(departureAirport, 'departures', flightDate);
+                    allFlights = [...allFlights, ...flights];
+                }
+                // Caso 3: Busca por aeroporto de destino
+                else if (arrivalAirport) {
+                    showDebug(`Buscando voos para aeroporto: ${arrivalAirport}`);
+                    const flights = await fetchAirportFlights(arrivalAirport, 'arrivals', flightDate);
+                    allFlights = [...allFlights, ...flights];
+                }
+                // Caso 4: Busca geral em aeroportos brasileiros
+                else {
+                    showDebug('Buscando voos em aeroportos brasileiros...');
+                    
+                    // Buscar em múltiplos aeroportos (limitado para não sobrecarregar)
+                    for (const airport of BRAZILIAN_AIRPORTS.slice(0, 3)) { // Limitar a 3 aeroportos
+                        showDebug(`Buscando aeroporto: ${airport}`);
+                        
+                        try {
+                            const departures = await fetchAirportFlights(airport, 'departures', flightDate);
+                            const arrivals = await fetchAirportFlights(airport, 'arrivals', flightDate);
+                            
+                            allFlights = [...allFlights, ...departures, ...arrivals];
+                            
+                            // Aguardar um pouco entre requisições
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        } catch (error) {
+                            showDebug(`Erro no aeroporto ${airport}: ${error.message}`);
+                        }
+                    }
+                }
+                
+                // Processar e filtrar apenas helicópteros
+                helicopters = processRealHelicopterData(allFlights);
+                
+                if (helicopters.length === 0) {
+                    showInfoMessage('Nenhum helicóptero encontrado nos dados da API.');
+                    showDebug('Nenhum helicóptero nos dados recebidos');
+                    
+                    // Mostrar tabela vazia
+                    const tbody = document.getElementById('helicoptersTableBody');
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="10" style="text-align: center; padding: 60px;">
+                                <i class="fas fa-helicopter" style="font-size: 48px; color: #666; margin-bottom: 20px;"></i>
+                                <h3 style="color: #666; margin-bottom: 10px;">Nenhum Helicóptero Encontrado</h3>
+                                <p style="color: #999;">Os dados da API não contêm helicópteros no momento.</p>
+                                <p style="color: #999; font-size: 12px; margin-top: 10px;">Última atualização: ${new Date().toLocaleString()}</p>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    // Zerar estatísticas
+                    document.getElementById('totalHelicopters').textContent = '0';
+                    document.getElementById('inFlight').textContent = '0';
+                    document.getElementById('avgAltitude').textContent = '0 pés';
+                    document.getElementById('avgSpeed').textContent = '0 nós';
+                } else {
+                    updateUI();
+                    lastUpdateTime = new Date();
+                    showSuccess(`${helicopters.length} helicóptero(s) encontrado(s) na API`);
+                }
+                
+                showLoading(false);
+                
+            } catch (error) {
+                console.error('Erro detalhado:', error);
+                showError('Erro ao carregar dados: ' + error.message);
+                showDebug('Erro completo: ' + error.toString());
+                showLoading(false);
+                
+                // Mostrar mensagem de erro, mas NUNCA dados simulados
+                showNoDataMessage();
+            }
+        }
+
+        async function fetchFlightByNumber(flightNumber, date) {
+            let url = `${API_CONFIG.baseUrl}/flights/number/${flightNumber}`;
+            
+            if (date) {
+                url += `/${date}`;
+            }
+            
+            showDebug(`Chamando: ${url}`);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'x-rapidapi-key': API_CONFIG.key,
+                    'x-rapidapi-host': API_CONFIG.host
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erro ${response.status} ao buscar voo`);
+            }
+
+            const text = await response.text();
+            showDebug(`Resposta (primeiros 200 chars): ${text.substring(0, 200)}`);
+            
+            // Verificar se a resposta não está vazia
+            if (!text || text.trim() === '') {
+                return [];
+            }
+            
+            try {
+                const data = JSON.parse(text);
+                return Array.isArray(data) ? data : (data ? [data] : []);
+            } catch (e) {
+                showDebug(`Erro ao parsear JSON: ${e.message}`);
+                return [];
+            }
+        }
+
+        async function fetchAirportFlights(airportCode, direction, date) {
+            const url = `${API_CONFIG.baseUrl}/flights/airport/icao/${airportCode}/${direction}`;
+            
+            showDebug(`Chamando: ${url}`);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'x-rapidapi-key': API_CONFIG.key,
+                    'x-rapidapi-host': API_CONFIG.host
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erro ${response.status} ao buscar aeroporto`);
+            }
+
+            const text = await response.text();
+            
+            if (!text || text.trim() === '') {
+                return [];
+            }
+            
+            try {
+                const data = JSON.parse(text);
+                return data[direction] || [];
+            } catch (e) {
+                showDebug(`Erro ao parsear JSON: ${e.message}`);
+                return [];
+            }
+        }
+
+        function processRealHelicopterData(flights) {
+            if (!flights || !Array.isArray(flights) || flights.length === 0) {
+                return [];
+            }
+            
+            showDebug(`Processando ${flights.length} voos da API`);
+            
+            // Filtrar apenas helicópteros baseado em dados reais da API
+            const helicopters = flights.filter(flight => {
+                // Verificar se é helicóptero pelo modelo ou tipo
+                const aircraftType = flight.aircraft?.type || flight.aircraft?.model || '';
+                const aircraftIcao = flight.aircraft?.icao || '';
+                
+                // Códigos ICAO de helicópteros comuns
+                const helicopterCodes = ['H', 'R', 'EC', 'AS', 'AW', 'BH', 'S76', 'H145', 'H125', 'H130', 'R44', 'R66'];
+                
+                const isHelicopter = helicopterCodes.some(code => 
+                    aircraftType.toUpperCase().includes(code) || 
+                    aircraftIcao.toUpperCase().includes(code)
+                );
+                
+                // Log para debug
+                if (isHelicopter) {
+                    showDebug(`Helicóptero encontrado: ${flight.flightNumber} - ${aircraftType}`);
+                }
+                
+                return isHelicopter;
+            });
+            
+            showDebug(`${helicopters.length} helicópteros identificados`);
+            
+            // Mapear para formato padronizado
+            return helicopters.map(flight => ({
+                id: flight.id || flight.flightNumber || 'N/A',
+                flightNumber: flight.flightNumber || flight.number || 'N/A',
+                aircraft: {
+                    model: flight.aircraft?.model || flight.aircraft?.type || 'Helicóptero',
+                    registration: flight.aircraft?.registration || flight.registration || 'N/A',
+                    icao: flight.aircraft?.icao || 'N/A'
+                },
+                airline: flight.airline?.name || flight.operator || 'Desconhecida',
+                altitude: flight.lastPosition?.altitude || flight.position?.altitude || 0,
+                speed: flight.lastPosition?.speed?.kmh || flight.position?.speed?.kmh || 0,
+                direction: flight.lastPosition?.heading || flight.position?.heading || 0,
+                departure: {
+                    airport: flight.departure?.airport?.name || flight.origin?.name || 'Desconhecido',
+                    code: flight.departure?.airport?.icao || flight.origin?.icao || 'N/A',
+                    time: flight.departure?.scheduledTime || flight.departure?.actualTime || 'N/A'
+                },
+                arrival: {
+                    airport: flight.arrival?.airport?.name || flight.destination?.name || 'Desconhecido',
+                    code: flight.arrival?.airport?.icao || flight.destination?.icao || 'N/A',
+                    time: flight.arrival?.scheduledTime || flight.arrival?.actualTime || 'N/A'
+                },
+                position: {
+                    lat: flight.lastPosition?.lat || flight.position?.lat || null,
+                    lng: flight.lastPosition?.lon || flight.position?.lon || null
+                },
+                status: flight.status || 'Desconhecido',
+                lastUpdated: flight.lastPosition?.timestamp || new Date().toISOString()
+            }));
+        }
+
+        function applyFilters() {
+            fetchRealHelicopterData();
+        }
+
+        function resetFilters() {
+            document.getElementById('flightNumber').value = '';
+            document.getElementById('departureAirport').value = '';
+            document.getElementById('arrivalAirport').value = '';
+            document.getElementById('flightDate').value = '';
+            fetchRealHelicopterData();
+        }
+
+        function updateUI() {
+            updateStats();
+            updateMap();
+            updateTable();
+        }
+
+        function updateStats() {
+            const total = helicopters.length;
+            document.getElementById('totalHelicopters').textContent = total;
+            
+            const inFlight = helicopters.filter(h => 
+                h.status && (h.status.toLowerCase().includes('active') || 
+                            h.status.toLowerCase().includes('enroute') ||
+                            h.status.toLowerCase().includes('airborne'))
+            ).length;
+            document.getElementById('inFlight').textContent = inFlight;
+            
+            const validAltitudes = helicopters.filter(h => h.altitude > 0);
+            const avgAltitude = validAltitudes.length > 0 
+                ? Math.round(validAltitudes.reduce((sum, h) => sum + h.altitude, 0) / validAltitudes.length)
+                : 0;
+            document.getElementById('avgAltitude').textContent = avgAltitude + ' pés';
+            
+            const validSpeeds = helicopters.filter(h => h.speed > 0);
+            const avgSpeed = validSpeeds.length > 0
+                ? Math.round(validSpeeds.reduce((sum, h) => sum + h.speed, 0) / validSpeeds.length)
+                : 0;
+            document.getElementById('avgSpeed').textContent = avgSpeed + ' nós';
+        }
+
+        function updateMap() {
+            clearMarkers();
+            
+            let hasValidPositions = false;
+            
+            helicopters.forEach(helicopter => {
+                if (helicopter.position && helicopter.position.lat && helicopter.position.lng) {
+                    hasValidPositions = true;
+                    
+                    const marker = L.marker([helicopter.position.lat, helicopter.position.lng], {
+                        icon: L.divIcon({
+                            className: 'custom-marker',
+                            html: `<i class="fas fa-helicopter" style="color: #667eea; font-size: 20px;"></i>`,
+                            iconSize: [20, 20]
+                        })
+                    }).addTo(map);
+                    
+                    marker.bindPopup(`
+                        <b>${helicopter.flightNumber}</b><br>
+                        Modelo: ${helicopter.aircraft.model}<br>
+                        Altitude: ${helicopter.altitude} pés<br>
+                        Velocidade: ${helicopter.speed} nós<br>
+                        Status: ${helicopter.status}<br>
+                        <small>Atualizado: ${new Date(helicopter.lastUpdated).toLocaleTimeString()}</small>
+                    `);
+                    
+                    markers.push(marker);
+                }
+            });
+            
+            if (!hasValidPositions && helicopters.length > 0) {
+                showInfoMessage('Helicópteros encontrados mas sem dados de posição para mapa.');
+            }
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('helicoptersTableBody');
+            
+            if (helicopters.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-search" style="font-size: 40px; color: #ccc; margin-bottom: 10px;"></i>
+                            <p>Nenhum helicóptero encontrado na API.</p>
+                            <p style="font-size: 12px; color: #999;">Apenas dados reais são exibidos.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = helicopters.map(helicopter => {
+                const altitudeClass = helicopter.altitude > 5000 ? 'altitude-high' : 
+                                    helicopter.altitude > 2000 ? 'altitude-medium' : 'altitude-low';
+                
+                return `
+                    <tr>
+                        <td>
+                            <i class="fas fa-helicopter helicopter-icon"></i>
+                            ${helicopter.flightNumber}
+                        </td>
+                        <td>${helicopter.aircraft.model} (${helicopter.aircraft.icao})</td>
+                        <td>${helicopter.airline}</td>
+                        <td>
+                            <span class="altitude-indicator ${helicopter.altitude > 0 ? altitudeClass : ''}"></span>
+                            ${helicopter.altitude > 0 ? helicopter.altitude + ' pés' : 'N/A'}
+                        </td>
+                        <td>${helicopter.speed > 0 ? helicopter.speed + ' nós' : 'N/A'}</td>
+                        <td>${helicopter.direction > 0 ? helicopter.direction + '°' : 'N/A'}</td>
+                        <td>${helicopter.departure.code}</td>
+                        <td>${helicopter.arrival.code}</td>
+                        <td>
+                            <span style="
+                                background: ${getStatusColor(helicopter.status)};
+                                color: white;
+                                padding: 4px 8px;
+                                border-radius: 4px;
+                                font-size: 12px;
+                            ">
+                                ${helicopter.status}
+                            </span>
+                        </td>
+                        <td><small>${new Date(helicopter.lastUpdated).toLocaleTimeString()}</small></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getStatusColor(status) {
+            const statusLower = status.toLowerCase();
+            if (statusLower.includes('active') || statusLower.includes('enroute')) return '#28a745';
+            if (statusLower.includes('landed') || statusLower.includes('arrived')) return '#6c757d';
+            if (statusLower.includes('scheduled') || statusLower.includes('expected')) return '#ffc107';
+            if (statusLower.includes('cancel')) return '#dc3545';
+            return '#17a2b8';
+        }
+
+        function showLoading(isLoading) {
+            if (!isLoading) return;
+            
+            const tbody = document.getElementById('helicoptersTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="loading">
+                        <i class="fas fa-spinner"></i>
+                        <p>Buscando dados reais da API...</p>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.classList.add('show');
+            
+            setTimeout(() => {
+                successDiv.classList.remove('show');
+            }, 3000);
+        }
+
+        function showInfoMessage(message) {
+            const infoDiv = document.getElementById('infoMessage');
+            infoDiv.textContent = message;
+            infoDiv.classList.add('show');
+            
+            setTimeout(() => {
+                infoDiv.classList.remove('show');
+            }, 5000);
+        }
+
+        function showDebug(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+
+        function toggleDebug() {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showCredentials() {
+            alert(`
+                Credenciais da API (Apenas Dados Reais):
+                
+                API Key: 9ee389d1afmsh55b40aa65b59156p139fcejsn446c2093eec
+                Host: aerodatabox.p.rapidapi.com
+                Login: ricardosr@outlook.com
+                
+                Endpoints utilizados:
+                - /airports/icao/{code}
+                - /flights/number/{flightNumber}
+                - /flights/airport/icao/{code}/departures
+                - /flights/airport/icao/{code}/arrivals
+                
+                IMPORTANTE: Apenas dados reais são exibidos.
+                Nenhum dado simulado ou mockado é utilizado.
+            `);
+        }
+    </script>
+    
+    <!-- Leaflet CSS e JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</body>
+</html>
