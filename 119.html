@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeliTrack Brasil - Monitoramento de Helicópteros</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Styles */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 i {
+            color: #667eea;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        /* Stats Cards */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card i {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-card h3 {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .stat-value {
+            color: #667eea;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        /* Main Content Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+
+        /* Filters Panel */
+        .filters-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: fit-content;
+        }
+
+        .filters-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-group {
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            display: block;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .filter-group select, .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .filter-group select:focus, .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-group.checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-group.checkbox input {
+            width: auto;
+        }
+
+        .apply-filters {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .apply-filters:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .reset-filters {
+            background: #f0f0f0;
+            color: #666;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .reset-filters:hover {
+            background: #e0e0e0;
+        }
+
+        /* Map Container */
+        .map-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        #map {
+            height: 600px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            z-index: 1;
+        }
+
+        .map-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .map-controls button {
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+
+        .map-controls button:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Helicopter List */
+        .helicopter-list {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .helicopter-list h2 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .list-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 10px 10px 35px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .sort-select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .helicopter-items {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .helicopter-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .helicopter-item:hover {
+            background: #f5f5f5;
+        }
+
+        .helicopter-item.selected {
+            background: #e8e8ff;
+            border-left: 4px solid #667eea;
+        }
+
+        .helicopter-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .helicopter-info {
+            flex: 1;
+        }
+
+        .helicopter-info h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .helicopter-info p {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 3px;
+        }
+
+        .helicopter-info .altitude {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .helicopter-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+        }
+
+        .helicopter-status.warning {
+            background: #ff9800;
+        }
+
+        .helicopter-status.danger {
+            background: #f44336;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-spinner.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Error Message */
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .error-message.active {
+            display: flex;
+        }
+
+        .error-message i {
+            font-size: 1.5em;
+        }
+
+        /* Refresh Button */
+        .refresh-btn {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .refresh-btn i {
+            transition: transform 0.3s;
+        }
+
+        .refresh-btn:hover i {
+            transform: rotate(180deg);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i class="fas fa-helicopter"></i>
+                HeliTrack Brasil
+            </h1>
+            <p>Sistema de Monitoramento de Helicópteros em Tempo Real</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                <div class="error-message" id="errorMessage">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="errorText"></span>
+                </div>
+                <button class="refresh-btn" onclick="fetchHelicopters()">
+                    <i class="fas fa-sync-alt"></i>
+                    Atualizar Dados
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-container" id="statsContainer">
+            <div class="stat-card">
+                <i class="fas fa-helicopter"></i>
+                <h3>Total de Helicópteros</h3>
+                <div class="stat-value" id="totalHelicopters">0</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <h3>Em Voo</h3>
+                <div class="stat-value" id="inFlight">0</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-map-marker-alt"></i>
+                <h3>Altitude Média</h3>
+                <div class="stat-value" id="avgAltitude">0 m</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-tachometer-alt"></i>
+                <h3>Velocidade Média</h3>
+                <div class="stat-value" id="avgSpeed">0 km/h</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="filters-panel">
+                <h2>
+                    <i class="fas fa-filter"></i>
+                    Filtros
+                </h2>
+                
+                <div class="filter-group">
+                    <label for="status">Status do Voo</label>
+                    <select id="status">
+                        <option value="all">Todos</option>
+                        <option value="active">Em Voo</option>
+                        <option value="grounded">Em Solo</option>
+                        <option value="warning">Alerta</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="manufacturer">Fabricante</label>
+                    <select id="manufacturer">
+                        <option value="all">Todos</option>
+                        <option value="airbus">Airbus Helicopters</option>
+                        <option value="bell">Bell Textron</option>
+                        <option value="boeing">Boeing</option>
+                        <option value="leonardo">Leonardo</option>
+                        <option value="russian">Russian Helicopters</option>
+                        <option value="sikorsky">Sikorsky</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="altitude">Altitude Mínima (m)</label>
+                    <input type="range" id="altitude" min="0" max="5000" step="100" value="0">
+                    <span id="altitudeValue">0 m</span>
+                </div>
+
+                <div class="filter-group">
+                    <label for="speed">Velocidade Mínima (km/h)</label>
+                    <input type="range" id="speed" min="0" max="300" step="10" value="0">
+                    <span id="speedValue">0 km/h</span>
+                </div>
+
+                <div class="filter-group">
+                    <label for="region">Região</label>
+                    <select id="region">
+                        <option value="all">Todas</option>
+                        <option value="norte">Norte</option>
+                        <option value="nordeste">Nordeste</option>
+                        <option value="centro-oeste">Centro-Oeste</option>
+                        <option value="sudeste">Sudeste</option>
+                        <option value="sul">Sul</option>
+                    </select>
+                </div>
+
+                <div class="filter-group checkbox">
+                    <input type="checkbox" id="showMilitary">
+                    <label for="showMilitary">Mostrar apenas uso militar</label>
+                </div>
+
+                <div class="filter-group checkbox">
+                    <input type="checkbox" id="showEmergency">
+                    <label for="showEmergency">Mostrar apenas emergência</label>
+                </div>
+
+                <button class="apply-filters" onclick="applyFilters()">
+                    <i class="fas fa-check"></i>
+                    Aplicar Filtros
+                </button>
+                <button class="reset-filters" onclick="resetFilters()">
+                    <i class="fas fa-undo"></i>
+                    Resetar Filtros
+                </button>
+            </div>
+
+            <div class="map-container">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <button onclick="centerMap('all')">
+                        <i class="fas fa-globe"></i>
+                        Ver Todos
+                    </button>
+                    <button onclick="centerMap('brazil')">
+                        <i class="fas fa-map"></i>
+                        Centralizar Brasil
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="helicopter-list">
+            <h2>
+                <i class="fas fa-list"></i>
+                Helicópteros Monitorados
+            </h2>
+            <div class="list-controls">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchHelicopter" placeholder="Buscar por matrícula, modelo ou localização...">
+                </div>
+                <select class="sort-select" id="sortBy">
+                    <option value="none">Ordenar por</option>
+                    <option value="altitude">Altitude</option>
+                    <option value="speed">Velocidade</option>
+                    <option value="model">Modelo</option>
+                </select>
+            </div>
+            <div class="helicopter-items" id="helicopterItems">
+                <!-- Helicopter items will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        // API Configuration
+        const API_KEY = 'e09f3391demsh1953622dc1b4488p1f57f1jsn9ea218884ae1';
+        const API_HOST = 'helicopter-flight-tracking.p.rapidapi.com';
+        
+        // Global variables
+        let map;
+        let markers = [];
+        let helicopters = [];
+        let filteredHelicopters = [];
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([-14.2350, -51.9253], 4);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Show loading spinner
+        function showLoading() {
+            document.getElementById('loadingSpinner').classList.add('active');
+        }
+
+        // Hide loading spinner
+        function hideLoading() {
+            document.getElementById('loadingSpinner').classList.remove('active');
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            errorText.textContent = message;
+            errorDiv.classList.add('active');
+            
+            setTimeout(() => {
+                errorDiv.classList.remove('active');
+            }, 5000);
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const total = filteredHelicopters.length;
+            const inFlight = filteredHelicopters.filter(h => h.status === 'active').length;
+            const avgAltitude = filteredHelicopters.reduce((acc, h) => acc + (h.altitude || 0), 0) / total || 0;
+            const avgSpeed = filteredHelicopters.reduce((acc, h) => acc + (h.speed || 0), 0) / total || 0;
+
+            document.getElementById('totalHelicopters').textContent = total;
+            document.getElementById('inFlight').textContent = inFlight;
+            document.getElementById('avgAltitude').textContent = Math.round(avgAltitude) + ' m';
+            document.getElementById('avgSpeed').textContent = Math.round(avgSpeed) + ' km/h';
+        }
+
+        // Fetch helicopters from API
+        async function fetchHelicopters() {
+            showLoading();
+            
+            const url = 'https://helicopter-flight-tracking.p.rapidapi.com/v1/helicopters';
+            const options = {
+                method: 'GET',
+                headers: {
+                    'X-RapidAPI-Key': API_KEY,
+                    'X-RapidAPI-Host': API_HOST
+                }
+            };
+
+            try {
+                const response = await fetch(url, options);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro na API: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Process and store helicopter data
+                helicopters = data.helicopters || [];
+                
+                // Generate mock data if API returns no data (for demonstration)
+                if (helicopters.length === 0) {
+                    generateMockData();
+                }
+                
+                applyFilters();
+                
+            } catch (error) {
+                console.error('Error fetching helicopters:', error);
+                showError('Erro ao carregar dados dos helicópteros. Usando dados de demonstração.');
+                generateMockData();
+                applyFilters();
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Generate mock data for demonstration
+        function generateMockData() {
+            helicopters = [
+                {
+                    id: '1',
+                    registration: 'PR-HTL',
+                    model: 'Airbus H125',
+                    manufacturer: 'airbus',
+                    altitude: 1500,
+                    speed: 220,
+                    heading: 180,
+                    latitude: -23.5505,
+                    longitude: -46.6333,
+                    status: 'active',
+                    type: 'civil',
+                    emergency: false,
+                    military: false
+                },
+                {
+                    id: '2',
+                    registration: 'PP-EMG',
+                    model: 'Bell 429',
+                    manufacturer: 'bell',
+                    altitude: 800,
+                    speed: 180,
+                    heading: 90,
+                    latitude: -19.9167,
+                    longitude: -43.9345,
+                    status: 'active',
+                    type: 'medical',
+                    emergency: true,
+                    military: false
+                },
+                {
+                    id: '3',
+                    registration: 'PT-ZZZ',
+                    model: 'Sikorsky S-76',
+                    manufacturer: 'sikorsky',
+                    altitude: 2000,
+                    speed: 250,
+                    heading: 270,
+                    latitude: -22.9068,
+                    longitude: -43.1729,
+                    status: 'active',
+                    type: 'civil',
+                    emergency: false,
+                    military: false
+                },
+                {
+                    id: '4',
+                    registration: 'FAB-1234',
+                    model: 'H225M Caracal',
+                    manufacturer: 'airbus',
+                    altitude: 3000,
+                    speed: 280,
+                    heading: 45,
+                    latitude: -15.7801,
+                    longitude: -47.9292,
+                    status: 'active',
+                    type: 'military',
+                    emergency: false,
+                    military: true
+                },
+                {
+                    id: '5',
+                    registration: 'PR-FSL',
+                    model: 'Leonardo AW109',
+                    manufacturer: 'leonardo',
+                    altitude: 0,
+                    speed: 0,
+                    heading: 0,
+                    latitude: -25.4284,
+                    longitude: -49.2733,
+                    status: 'grounded',
+                    type: 'civil',
+                    emergency: false,
+                    military: false
+                }
+            ];
+        }
+
+        // Create marker for helicopter
+        function createHelicopterMarker(helicopter) {
+            const icon = L.divIcon({
+                className: 'helicopter-marker',
+                html: `<div style="transform: rotate(${helicopter.heading || 0}deg)">
+                        <i class="fas fa-helicopter" style="color: #667eea; font-size: 24px;"></i>
+                       </div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            const marker = L.marker([helicopter.latitude, helicopter.longitude], { 
+                icon: icon,
+                title: helicopter.registration 
+            }).bindPopup(`
+                <b>${helicopter.registration}</b><br>
+                Modelo: ${helicopter.model}<br>
+                Altitude: ${helicopter.altitude} m<br>
+                Velocidade: ${helicopter.speed} km/h<br>
+                Status: ${helicopter.status === 'active' ? 'Em Voo' : 'Em Solo'}<br>
+                Tipo: ${helicopter.military ? 'Militar' : helicopter.type === 'medical' ? 'Médico' : 'Civil'}
+            `);
+
+            marker.on('click', () => {
+                selectHelicopter(helicopter.id);
+            });
+
+            return marker;
+        }
+
+        // Clear all markers from map
+        function clearMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+        }
+
+        // Display helicopters on map
+        function displayHelicopters() {
+            clearMarkers();
+            
+            filteredHelicopters.forEach(helicopter => {
+                if (helicopter.latitude && helicopter.longitude) {
+                    const marker = createHelicopterMarker(helicopter);
+                    marker.addTo(map);
+                    markers.push(marker);
+                }
+            });
+
+            updateHelicopterList();
+            updateStatistics();
+        }
+
+        // Update helicopter list
+        function updateHelicopterList() {
+            const listContainer = document.getElementById('helicopterItems');
+            const searchTerm = document.getElementById('searchHelicopter').value.toLowerCase();
+            const sortBy = document.getElementById('sortBy').value;
+
+            let displayedHelicopters = [...filteredHelicopters];
+
+            // Apply search filter
+            if (searchTerm) {
+                displayedHelicopters = displayedHelicopters.filter(h => 
+                    h.registration.toLowerCase().includes(searchTerm) ||
+                    h.model.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // Apply sorting
+            if (sortBy !== 'none') {
+                displayedHelicopters.sort((a, b) => {
+                    if (sortBy === 'altitude') return b.altitude - a.altitude;
+                    if (sortBy === 'speed') return b.speed - a.speed;
+                    if (sortBy === 'model') return a.model.localeCompare(b.model);
+                });
+            }
+
+            // Generate HTML
+            listContainer.innerHTML = displayedHelicopters.map(helicopter => `
+                <div class="helicopter-item" onclick="selectHelicopter('${helicopter.id}')" id="helicopter-${helicopter.id}">
+                    <div class="helicopter-icon">
+                        <i class="fas fa-helicopter"></i>
+                    </div>
+                    <div class="helicopter-info">
+                        <h4>${helicopter.registration}</h4>
+                        <p>${helicopter.model}</p>
+                        <p>Alt: <span class="altitude">${helicopter.altitude} m</span> | Vel: ${helicopter.speed} km/h</p>
+                        <p>${helicopter.military ? 'Militar' : helicopter.type === 'medical' ? 'Emergência' : 'Civil'}</p>
+                    </div>
+                    <div class="helicopter-status ${helicopter.status === 'active' ? '' : 'warning'}"></div>
+                </div>
+            `).join('');
+        }
+
+        // Select helicopter
+        function selectHelicopter(id) {
+            // Remove selected class from all items
+            document.querySelectorAll('.helicopter-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Add selected class to clicked item
+            const selectedItem = document.getElementById(`helicopter-${id}`);
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+            }
+
+            // Find and center on helicopter
+            const helicopter = filteredHelicopters.find(h => h.id === id);
+            if (helicopter && helicopter.latitude && helicopter.longitude) {
+                map.setView([helicopter.latitude, helicopter.longitude], 10);
+                
+                // Open popup
+                markers.forEach(marker => {
+                    if (marker.getLatLng().lat === helicopter.latitude && 
+                        marker.getLatLng().lng === helicopter.longitude) {
+                        marker.openPopup();
+                    }
+                });
+            }
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const status = document.getElementById('status').value;
+            const manufacturer = document.getElementById('manufacturer').value;
+            const minAltitude = parseInt(document.getElementById('altitude').value);
+            const minSpeed = parseInt(document.getElementById('speed').value);
+            const region = document.getElementById('region').value;
+            const showMilitary = document.getElementById('showMilitary').checked;
+            const showEmergency = document.getElementById('showEmergency').checked;
+
+            filteredHelicopters = helicopters.filter(helicopter => {
+                // Status filter
+                if (status !== 'all' && helicopter.status !== status) return false;
+
+                // Manufacturer filter
+                if (manufacturer !== 'all' && helicopter.manufacturer !== manufacturer) return false;
+
+                // Altitude filter
+                if (helicopter.altitude < minAltitude) return false;
+
+                // Speed filter
+                if (helicopter.speed < minSpeed) return false;
+
+                // Military filter
+                if (showMilitary && !helicopter.military) return false;
+
+                // Emergency filter
+                if (showEmergency && !helicopter.emergency) return false;
+
+                // Region filter (simplified)
+                if (region !== 'all') {
+                    const regionMap = {
+                        'norte': { latMin: -10, latMax: 5, lngMin: -75, lngMax: -45 },
+                        'nordeste': { latMin: -18, latMax: -5, lngMin: -45, lngMax: -35 },
+                        'centro-oeste': { latMin: -25, latMax: -5, lngMin: -65, lngMax: -45 },
+                        'sudeste': { latMin: -25, latMax: -15, lngMin: -55, lngMax: -40 },
+                        'sul': { latMin: -35, latMax: -25, lngMin: -60, lngMax: -45 }
+                    };
+                    
+                    const bounds = regionMap[region];
+                    if (bounds) {
+                        if (helicopter.latitude < bounds.latMin || 
+                            helicopter.latitude > bounds.latMax ||
+                            helicopter.longitude < bounds.lngMin || 
+                            helicopter.longitude > bounds.lngMax) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            });
+
+            displayHelicopters();
+        }
+
+        // Reset filters
+        function resetFilters() {
+            document.getElementById('status').value = 'all';
+            document.getElementById('manufacturer').value = 'all';
+            document.getElementById('altitude').value = 0;
+            document.getElementById('altitudeValue').textContent = '0 m';
+            document.getElementById('speed').value = 0;
+            document.getElementById('speedValue').textContent = '0 km/h';
+            document.getElementById('region').value = 'all';
+            document.getElementById('showMilitary').checked = false;
+            document.getElementById('showEmergency').checked = false;
+            document.getElementById('searchHelicopter').value = '';
+            document.getElementById('sortBy').value = 'none';
+
+            applyFilters();
+        }
+
+        // Center map
+        function centerMap(type) {
+            if (type === 'all' && filteredHelicopters.length > 0) {
+                const bounds = L.latLngBounds();
+                filteredHelicopters.forEach(h => {
+                    if (h.latitude && h.longitude) {
+                        bounds.extend([h.latitude, h.longitude]);
+                    }
+                });
+                map.fitBounds(bounds);
+            } else {
+                map.setView([-14.2350, -51.9253], 4);
+            }
+        }
+
+        // Update slider values
+        document.getElementById('altitude').addEventListener('input', function(e) {
+            document.getElementById('altitudeValue').textContent = e.target.value + ' m';
+        });
+
+        document.getElementById('speed').addEventListener('input', function(e) {
+            document.getElementById('speedValue').textContent = e.target.value + ' km/h';
+        });
+
+        document.getElementById('searchHelicopter').addEventListener('input', function() {
+            updateHelicopterList();
+        });
+
+        document.getElementById('sortBy').addEventListener('change', function() {
+            updateHelicopterList();
+        });
+
+        // Initialize application
+        window.onload = function() {
+            initMap();
+            fetchHelicopters();
+            
+            // Set up auto-refresh every 30 seconds
+            setInterval(fetchHelicopters, 30000);
+        };
+    </script>
+</body>
+</html>
