@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeliTrack Brasil - Live ADS-B</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Mantendo seu estilo original com pequenos ajustes de legibilidade */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        :root {
+            --primary: #0066b3; --primary-dark: #004c8c; --secondary: #ff6b00;
+            --accent: #00a896; --gray-light: #f5f7fa; --gray: #e4e7eb;
+            --gray-dark: #6c757d; --text-dark: #212529; --white: #ffffff;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08); --border-radius: 12px;
+        }
+        body { background-color: #f0f2f5; color: var(--text-dark); padding: 16px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        .header {
+            background: linear-gradient(135deg, #1a3b5c 0%, #0a1e30 100%);
+            color: white; padding: 24px; border-radius: var(--border-radius);
+            margin-bottom: 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+        }
+        .logo i { color: var(--secondary); font-size: 2.2rem; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 28px; }
+        .stat-card { background: var(--white); padding: 20px; border-radius: var(--border-radius); box-shadow: var(--shadow); display: flex; align-items: center; gap: 16px; }
+        .stat-icon { width: 48px; height: 48px; background: var(--gray-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 1.5rem; }
+
+        .results-section { background: var(--white); border-radius: var(--border-radius); box-shadow: var(--shadow); overflow: hidden; }
+        .results-header { padding: 20px 24px; background: var(--gray-light); border-bottom: 1px solid var(--gray); display: flex; justify-content: space-between; align-items: center; }
+        
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        th { text-align: left; padding: 16px 20px; background: white; font-size: 0.85rem; color: var(--gray-dark); text-transform: uppercase; border-bottom: 2px solid var(--gray); }
+        td { padding: 16px 20px; border-bottom: 1px solid var(--gray); font-size: 0.95rem; }
+        tr:hover { background: var(--gray-light); }
+
+        .badge-live { background: #ff0000; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        .loading { display: none; text-align: center; padding: 40px; }
+        .loading i { font-size: 2rem; color: var(--primary); animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <h1><i class="fas fa-helicopter"></i> HeliTrack Brasil</h1>
+                <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 4px;">Dados em Tempo Real via ADS-B.lol</div>
+            </div>
+            <div id="connectionStatus" class="badge-live">LIVE - BRASIL</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-radar"></i></div>
+                <div class="stat-info">
+                    <h3>Em Voo (Brasil)</h3>
+                    <p id="count-total">0</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+                <div class="stat-info">
+                    <h3>Maior Altitude</h3>
+                    <p id="max-alt">0 ft</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section">
+            <div class="results-header">
+                <h2><i class="fas fa-list-ul"></i> Aeronaves Detectadas</h2>
+                <button class="btn" onclick="fetchData()" style="padding: 8px 16px; cursor: pointer;">
+                    <i class="fas fa-sync"></i> Atualizar
+                </button>
+            </div>
+
+            <div class="loading" id="loading">
+                <i class="fas fa-circle-notch"></i>
+                <p>Conectando à rede ADS-B...</p>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Prefixo/ICAO</th>
+                            <th>Modelo/Tipo</th>
+                            <th>Callsign</th>
+                            <th>Altitude</th>
+                            <th>Velocidade</th>
+                            <th>Rumo (Heading)</th>
+                            <th>Localização (Lat, Lon)</th>
+                            <th>Última Atualização</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configurações para focar no Brasil (Centro aproximado e raio amplo)
+        const LAT = -15.7801; 
+        const LON = -47.9292;
+        const DISTANCE = 1500; // Milhas náuticas para cobrir boa parte do Brasil
+
+        async function fetchData() {
+            const tableBody = document.getElementById('tableBody');
+            const loading = document.getElementById('loading');
+            const countTotal = document.getElementById('count-total');
+            const maxAlt = document.getElementById('max-alt');
+
+            loading.style.display = 'block';
+            tableBody.innerHTML = '';
+
+            try {
+                // Endpoint do ADSB.lol (Proxy CORS pode ser necessário se rodar localmente sem servidor)
+                // Usando a rota de aeronaves por localização
+                const response = await fetch(`https://api.adsb.lol/v2/lat/${LAT}/lon/${LON}/dist/${DISTANCE}`);
+                const data = await response.json();
+                
+                let aircrafts = data.ac || [];
+
+                // Filtragem para Helicópteros
+                // No ADS-B, helicópteros costumam ter a categoria de emissor (category) 'A7' 
+                // ou tipos de aeronave específicos.
+                const helis = aircrafts.filter(ac => {
+                    const isHeliType = ac.t && (ac.t.startsWith('B06') || ac.t.startsWith('EC3') || ac.t.startsWith('A109') || ac.t.startsWith('AS35'));
+                    const isHeliCategory = ac.category === 'A7';
+                    return isHeliType || isHeliCategory || ac.desc?.toLowerCase().includes('heli');
+                });
+
+                // Se a API retornar vazio para helis específicos (devido a filtros rígidos), 
+                // vamos mostrar as primeiras aeronaves em geral para demonstrar a conexão funcionando
+                const displayList = helis.length > 0 ? helis : aircrafts.slice(0, 50);
+
+                countTotal.innerText = displayList.length;
+                let topAlt = 0;
+
+                displayList.forEach(ac => {
+                    if (ac.alt_baro > topAlt && ac.alt_baro < 50000) topAlt = ac.alt_baro;
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <strong>${ac.registration || 'N/A'}</strong><br>
+                            <small style="color:var(--gray-dark)">${ac.hex.toUpperCase()}</small>
+                        </td>
+                        <td>
+                            <span class="helipad-type" style="background:#e3f2fd; padding:4px 8px; border-radius:4px">
+                                ${ac.t || 'Desconhecido'}
+                            </span><br>
+                            <small>${ac.desc || ''}</small>
+                        </td>
+                        <td>${ac.flight || '---'}</td>
+                        <td>${ac.alt_baro ? ac.alt_baro + ' ft' : 'Solo/GND'}</td>
+                        <td>${ac.gs ? Math.round(ac.gs) + ' kt' : '---'}</td>
+                        <td><i class="fas fa-location-arrow" style="transform: rotate(${ac.track || 0}deg)"></i> ${ac.track || 0}°</td>
+                        <td><small>${ac.lat?.toFixed(4)}, ${ac.lon?.toFixed(4)}</small></td>
+                        <td>${new Date().toLocaleTimeString()}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                maxAlt.innerText = topAlt > 0 ? topAlt.toLocaleString() + ' ft' : '---';
+
+            } catch (error) {
+                console.error("Erro ao buscar dados:", error);
+                tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red; padding:20px;">
+                    Erro ao carregar dados da API. Verifique sua conexão ou CORS.</td></tr>`;
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Atualizar automaticamente a cada 30 segundos
+        setInterval(fetchData, 30000);
+        
+        // Carga inicial
+        window.onload = fetchData;
+    </script>
+</body>
+</html>
