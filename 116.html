@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeliTracker Brasil - Monitoramento de Helicópteros</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0f1e;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #1a1f2f;
+            border-right: 1px solid #2a2f3f;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: #0f1422;
+            border-bottom: 2px solid #2ecc71;
+        }
+
+        .sidebar-header h1 {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-header h1 i {
+            color: #2ecc71;
+        }
+
+        .stats-container {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: #0f1422;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-card i {
+            font-size: 24px;
+            color: #2ecc71;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: #8a8f9f;
+        }
+
+        .filter-section {
+            padding: 20px;
+            border-top: 1px solid #2a2f3f;
+        }
+
+        .filter-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2ecc71;
+        }
+
+        .filter-group {
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 14px;
+            color: #8a8f9f;
+            margin-bottom: 5px;
+        }
+
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 10px;
+            background: #0f1422;
+            border: 1px solid #2a2f3f;
+            color: #fff;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #2ecc71;
+        }
+
+        .aircraft-list {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .aircraft-item {
+            background: #0f1422;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            border: 1px solid #2a2f3f;
+        }
+
+        .aircraft-item:hover {
+            transform: translateX(5px);
+            border-color: #2ecc71;
+        }
+
+        .aircraft-item.selected {
+            border-color: #2ecc71;
+            background: #1a1f2f;
+        }
+
+        .aircraft-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .aircraft-callsign {
+            font-weight: bold;
+            color: #2ecc71;
+        }
+
+        .aircraft-type {
+            font-size: 12px;
+            padding: 3px 8px;
+            background: #2a2f3f;
+            border-radius: 12px;
+        }
+
+        .aircraft-details {
+            font-size: 12px;
+            color: #8a8f9f;
+        }
+
+        .aircraft-details div {
+            margin-top: 5px;
+        }
+
+        .aircraft-details i {
+            width: 18px;
+            color: #2ecc71;
+        }
+
+        /* Mapa */
+        .map-container {
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            background: #0a0f1e;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+
+        .map-btn {
+            background: #1a1f2f;
+            border: 1px solid #2a2f3f;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .map-btn:hover {
+            background: #2a2f3f;
+            border-color: #2ecc71;
+        }
+
+        .map-btn.active {
+            background: #2ecc71;
+            color: #0a0f1e;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 15, 30, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            display: none;
+        }
+
+        .loading-spinner {
+            text-align: center;
+        }
+
+        .loading-spinner i {
+            font-size: 48px;
+            color: #2ecc71;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Popup customizado */
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: #1a1f2f;
+            color: #fff;
+            border-radius: 8px;
+            border: 1px solid #2ecc71;
+        }
+
+        .custom-popup .leaflet-popup-tip {
+            background: #1a1f2f;
+            border-top-color: #2ecc71;
+        }
+
+        .popup-content {
+            padding: 10px;
+        }
+
+        .popup-content h3 {
+            color: #2ecc71;
+            margin-bottom: 8px;
+        }
+
+        .popup-content p {
+            margin: 5px 0;
+            font-size: 13px;
+        }
+
+        .popup-content i {
+            width: 20px;
+            color: #2ecc71;
+        }
+
+        .error-message {
+            background: #ff4444;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 20px;
+            display: none;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8a8f9f;
+        }
+
+        .no-data i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>
+                    <i class="fas fa-helicopter"></i>
+                    HeliTracker Brasil
+                </h1>
+            </div>
+
+            <div class="stats-container">
+                <div class="stat-card">
+                    <i class="fas fa-helicopter"></i>
+                    <div class="value" id="totalHelicopters">0</div>
+                    <div class="label">Helicópteros</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-plane"></i>
+                    <div class="value" id="totalActive">0</div>
+                    <div class="label">Em Voo</div>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <div class="filter-title">
+                    <i class="fas fa-filter"></i> Filtros
+                </div>
+                
+                <div class="filter-group">
+                    <label><i class="fas fa-tag"></i> Prefixo / Callsign</label>
+                    <input type="text" id="filterCallsign" placeholder="Ex: PR-HLC">
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-fighter-jet"></i> Modelo</label>
+                    <select id="filterModel">
+                        <option value="">Todos os modelos</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-building"></i> Operador</label>
+                    <select id="filterOperator">
+                        <option value="">Todos os operadores</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-map-marker-alt"></i> Altitude (m)</label>
+                    <input type="range" id="filterAltitude" min="0" max="5000" step="100" value="0">
+                    <span id="altitudeValue">0m - 5000m</span>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-tachometer-alt"></i> Velocidade (km/h)</label>
+                    <input type="range" id="filterSpeed" min="0" max="300" step="10" value="0">
+                    <span id="speedValue">0km/h - 300km/h</span>
+                </div>
+
+                <button class="map-btn" style="width: 100%;" onclick="applyFilters()">
+                    <i class="fas fa-search"></i> Aplicar Filtros
+                </button>
+            </div>
+
+            <div class="aircraft-list" id="aircraftList">
+                <div class="no-data">
+                    <i class="fas fa-helicopter"></i>
+                    <p>Carregando helicópteros...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapa -->
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <div class="map-controls">
+                <button class="map-btn" onclick="centerMap()" title="Centralizar mapa">
+                    <i class="fas fa-crosshairs"></i>
+                </button>
+                <button class="map-btn" onclick="refreshData()" title="Atualizar dados">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="map-btn" onclick="toggleLayer()" title="Alternar mapa base">
+                    <i class="fas fa-layer-group"></i>
+                </button>
+            </div>
+
+            <div class="loading-overlay" id="loading">
+                <div class="loading-spinner">
+                    <i class="fas fa-circle-notch"></i>
+                    <p style="margin-top: 15px;">Buscando dados dos helicópteros...</p>
+                </div>
+            </div>
+
+            <div class="error-message" id="errorMessage">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="errorText"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Configuração da API
+        const API_CONFIG = {
+            app: 'default-application_11568714',
+            key: 'e09f3391demsh1953622dc1b4488p1f57f1jsn9ea218884ae1',
+            host: 'adsbexchange-com1.p.rapidapi.com'
+        };
+
+        // Variáveis globais
+        let map;
+        let markers = [];
+        let allAircrafts = [];
+        let filteredAircrafts = [];
+        let mapLayer = 'satellite';
+        let selectedAircraft = null;
+
+        // Inicialização do mapa
+        function initMap() {
+            map = L.map('map').setView([-15.7801, -47.9292], 4); // Centralizado no Brasil
+
+            // Camada base padrão (satélite)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 18
+            }).addTo(map);
+
+            // Ícone personalizado para helicópteros
+            L.Icon.Default.mergeOptions({
+                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
+        }
+
+        // Buscar dados da API
+        async function fetchAircrafts() {
+            showLoading();
+            hideError();
+
+            try {
+                // Nota: Ajuste o endpoint conforme documentação da API que você tem acesso
+                // Este é um exemplo baseado em APIs de ADS-B comuns
+                const response = await fetch('https://adsbexchange-com1.p.rapidapi.com/v2/aircrafts/', {
+                    method: 'GET',
+                    headers: {
+                        'X-RapidAPI-Key': API_CONFIG.key,
+                        'X-RapidAPI-Host': API_CONFIG.host
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Filtrar apenas helicópteros e aeronaves no Brasil
+                // Nota: Adapte conforme estrutura real da resposta da API
+                allAircrafts = data.aircraft ? data.aircraft.filter(a => {
+                    // Filtro básico para helicópteros (ajuste conforme dados reais)
+                    const isHelicopter = a.t && a.t.toLowerCase().includes('helicopter') || 
+                                        a.t && ['R22', 'R44', 'AW109', 'AS350', 'H125'].some(model => a.t.includes(model));
+                    
+                    // Verificar se está no Brasil (coordenadas aproximadas)
+                    const inBrazil = a.lat && a.lon && 
+                                    a.lat >= -33.75 && a.lat <= 5.27 && 
+                                    a.lon >= -73.98 && a.lon <= -34.79;
+                    
+                    return isHelicopter || inBrazil;
+                }) : [];
+
+                // Se não houver dados reais, usar dados simulados para demonstração
+                if (allAircrafts.length === 0) {
+                    allAircrafts = generateMockData();
+                }
+
+                processAircraftData();
+                updateUI();
+                hideLoading();
+
+            } catch (error) {
+                console.error('Erro ao buscar dados:', error);
+                
+                // Usar dados simulados em caso de erro
+                allAircrafts = generateMockData();
+                processAircraftData();
+                updateUI();
+                
+                showError('Usando dados simulados - ' + error.message);
+                hideLoading();
+            }
+        }
+
+        // Gerar dados simulados para demonstração
+        function generateMockData() {
+            const models = ['AS350 Écureuil', 'R44 Raven', 'AW109 Grand', 'H125 Esquilo', 'Bell 206', 'S-76 Spirit', 'EC135', 'MD902'];
+            const operators = ['Polícia Civil', 'SAMU', 'Corpo de Bombeiros', 'Força Aérea', 'Privado', 'Petrobras', 'TV Globo'];
+            const cities = [
+                { name: 'São Paulo', lat: -23.5505, lon: -46.6333 },
+                { name: 'Rio de Janeiro', lat: -22.9068, lon: -43.1729 },
+                { name: 'Brasília', lat: -15.7801, lon: -47.9292 },
+                { name: 'Belo Horizonte', lat: -19.9167, lon: -43.9345 },
+                { name: 'Curitiba', lat: -25.4297, lon: -49.2719 },
+                { name: 'Salvador', lat: -12.9714, lon: -38.5014 },
+                { name: 'Manaus', lat: -3.1190, lon: -60.0217 },
+                { name: 'Porto Alegre', lat: -30.0346, lon: -51.2177 }
+            ];
+
+            const aircrafts = [];
+            
+            for (let i = 0; i < 25; i++) {
+                const city = cities[Math.floor(Math.random() * cities.length)];
+                const model = models[Math.floor(Math.random() * models.length)];
+                const operator = operators[Math.floor(Math.random() * operators.length)];
+                
+                aircrafts.push({
+                    hex: `HEX${i.toString().padStart(4, '0')}`,
+                    flight: `PR-${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}`,
+                    t: model,
+                    operator: operator,
+                    lat: city.lat + (Math.random() - 0.5) * 2,
+                    lon: city.lon + (Math.random() - 0.5) * 2,
+                    alt_baro: Math.floor(Math.random() * 3000) + 500,
+                    gs: Math.floor(Math.random() * 200) + 50,
+                    track: Math.floor(Math.random() * 360),
+                    squawk: Math.floor(Math.random() * 7777).toString().padStart(4, '0'),
+                    category: 'helicopter',
+                    messages: Math.floor(Math.random() * 1000) + 100,
+                    seen: Math.floor(Math.random() * 60) + 1
+                });
+            }
+            
+            return aircrafts;
+        }
+
+        // Processar dados das aeronaves
+        function processAircraftData() {
+            filteredAircrafts = [...allAircrafts];
+            updateFilterOptions();
+            updateStats();
+            updateMarkers();
+            updateAircraftList();
+        }
+
+        // Atualizar opções dos filtros
+        function updateFilterOptions() {
+            const models = [...new Set(allAircrafts.map(a => a.t).filter(Boolean))];
+            const operators = [...new Set(allAircrafts.map(a => a.operator).filter(Boolean))];
+
+            const modelSelect = document.getElementById('filterModel');
+            const operatorSelect = document.getElementById('filterOperator');
+
+            modelSelect.innerHTML = '<option value="">Todos os modelos</option>' + 
+                models.map(m => `<option value="${m}">${m}</option>`).join('');
+
+            operatorSelect.innerHTML = '<option value="">Todos os operadores</option>' + 
+                operators.map(o => `<option value="${o}">${o}</option>`).join('');
+        }
+
+        // Aplicar filtros
+        function applyFilters() {
+            const callsign = document.getElementById('filterCallsign').value.toUpperCase();
+            const model = document.getElementById('filterModel').value;
+            const operator = document.getElementById('filterOperator').value;
+            const maxAltitude = parseInt(document.getElementById('filterAltitude').value);
+            const maxSpeed = parseInt(document.getElementById('filterSpeed').value);
+
+            filteredAircrafts = allAircrafts.filter(a => {
+                if (callsign && !(a.flight && a.flight.toUpperCase().includes(callsign))) return false;
+                if (model && a.t !== model) return false;
+                if (operator && a.operator !== operator) return false;
+                if (a.alt_baro && a.alt_baro > maxAltitude) return false;
+                if (a.gs && a.gs > maxSpeed) return false;
+                return true;
+            });
+
+            updateStats();
+            updateMarkers();
+            updateAircraftList();
+        }
+
+        // Atualizar estatísticas
+        function updateStats() {
+            document.getElementById('totalHelicopters').textContent = allAircrafts.length;
+            const inFlight = filteredAircrafts.filter(a => a.alt_baro > 100).length;
+            document.getElementById('totalActive').textContent = inFlight;
+        }
+
+        // Atualizar marcadores no mapa
+        function updateMarkers() {
+            // Remover marcadores antigos
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            // Adicionar novos marcadores
+            filteredAircrafts.forEach(aircraft => {
+                if (!aircraft.lat || !aircraft.lon) return;
+
+                const marker = L.marker([aircraft.lat, aircraft.lon]).addTo(map);
+                
+                // Conteúdo do popup
+                const popupContent = `
+                    <div class="popup-content">
+                        <h3><i class="fas fa-helicopter"></i> ${aircraft.flight || 'N/I'}</h3>
+                        <p><i class="fas fa-fighter-jet"></i> Modelo: ${aircraft.t || 'N/I'}</p>
+                        <p><i class="fas fa-building"></i> Operador: ${aircraft.operator || 'N/I'}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> Altitude: ${aircraft.alt_baro || 0} m</p>
+                        <p><i class="fas fa-tachometer-alt"></i> Velocidade: ${aircraft.gs || 0} km/h</p>
+                        <p><i class="fas fa-compass"></i> Direção: ${aircraft.track || 0}°</p>
+                        <p><i class="fas fa-hashtag"></i> Squawk: ${aircraft.squawk || 'N/I'}</p>
+                        <p><i class="fas fa-clock"></i> Última atualização: ${aircraft.seen || 0}s atrás</p>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent, { className: 'custom-popup' });
+                
+                marker.on('click', () => {
+                    selectedAircraft = aircraft;
+                    updateAircraftList();
+                });
+
+                markers.push(marker);
+            });
+        }
+
+        // Atualizar lista de aeronaves
+        function updateAircraftList() {
+            const list = document.getElementById('aircraftList');
+            
+            if (filteredAircrafts.length === 0) {
+                list.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-search"></i>
+                        <p>Nenhum helicóptero encontrado</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = filteredAircrafts.map(aircraft => `
+                <div class="aircraft-item ${selectedAircraft && selectedAircraft.hex === aircraft.hex ? 'selected' : ''}" 
+                     onclick="focusAircraft('${aircraft.hex}')">
+                    <div class="aircraft-header">
+                        <span class="aircraft-callsign">${aircraft.flight || 'N/I'}</span>
+                        <span class="aircraft-type">${aircraft.t || 'N/I'}</span>
+                    </div>
+                    <div class="aircraft-details">
+                        <div><i class="fas fa-map-marker-alt"></i> ${aircraft.lat?.toFixed(4) || 'N/I'}, ${aircraft.lon?.toFixed(4) || 'N/I'}</div>
+                        <div><i class="fas fa-building"></i> ${aircraft.operator || 'N/I'}</div>
+                        <div><i class="fas fa-tachometer-alt"></i> ${aircraft.alt_baro || 0} m | ${aircraft.gs || 0} km/h</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Focar em uma aeronave específica
+        function focusAircraft(hex) {
+            const aircraft = filteredAircrafts.find(a => a.hex === hex);
+            if (aircraft && aircraft.lat && aircraft.lon) {
+                map.setView([aircraft.lat, aircraft.lon], 10);
+                selectedAircraft = aircraft;
+                updateAircraftList();
+            }
+        }
+
+        // Centralizar mapa no Brasil
+        function centerMap() {
+            map.setView([-15.7801, -47.9292], 4);
+        }
+
+        // Atualizar dados
+        function refreshData() {
+            fetchAircrafts();
+        }
+
+        // Alternar camada do mapa
+        function toggleLayer() {
+            map.eachLayer(layer => {
+                if (layer instanceof L.TileLayer) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            if (mapLayer === 'satellite') {
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+                mapLayer = 'street';
+            } else {
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri'
+                }).addTo(map);
+                mapLayer = 'satellite';
+            }
+        }
+
+        // Atualizar valores dos sliders
+        document.getElementById('filterAltitude').addEventListener('input', function(e) {
+            document.getElementById('altitudeValue').textContent = `0m - ${e.target.value}m`;
+        });
+
+        document.getElementById('filterSpeed').addEventListener('input', function(e) {
+            document.getElementById('speedValue').textContent = `0km/h - ${e.target.value}km/h`;
+        });
+
+        // Funções de UI
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('errorMessage').style.display = 'block';
+            setTimeout(hideError, 5000);
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        // Atualizar dados em tempo real
+        setInterval(refreshData, 30000); // Atualizar a cada 30 segundos
+
+        // Inicialização
+        window.onload = () => {
+            initMap();
+            fetchAircrafts();
+        };
+    </script>
+</body>
+</html>
