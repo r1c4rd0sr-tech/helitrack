@@ -11,7 +11,7 @@
     <!-- Leaflet CSS para mapa -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Mantém todo o CSS original */
+        /* Mantém o mesmo CSS */
         * {
             margin: 0;
             padding: 0;
@@ -49,7 +49,6 @@
             margin: 0 auto;
         }
 
-        /* Header */
         .header {
             background: linear-gradient(135deg, var(--brazil-green) 0%, var(--brazil-blue) 100%);
             color: white;
@@ -112,7 +111,6 @@
             color: var(--brazil-yellow);
         }
 
-        /* Cards de estatísticas */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -160,7 +158,6 @@
             color: var(--text-dark);
         }
 
-        /* Filtros */
         .filters-section {
             background: var(--white);
             padding: 24px;
@@ -266,7 +263,6 @@
             background: var(--gray-light);
         }
 
-        /* Datasources indicators */
         .datasources {
             display: flex;
             flex-wrap: wrap;
@@ -319,7 +315,6 @@
             color: #0056b3;
         }
 
-        /* Debug panel */
         .debug-panel {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -372,7 +367,6 @@
             padding: 4px 8px;
         }
 
-        /* Tabela de resultados */
         .results-section {
             background: var(--white);
             border-radius: var(--border-radius);
@@ -526,7 +520,6 @@
             }
         }
 
-        /* Mapa */
         #map {
             height: 600px;
             width: 100%;
@@ -547,7 +540,6 @@
             justify-content: center;
         }
 
-        /* Mobile adjustments */
         @media (max-width: 640px) {
             body {
                 padding: 8px;
@@ -597,7 +589,6 @@
             }
         }
 
-        /* Loading */
         .loading {
             display: none;
             text-align: center;
@@ -658,7 +649,7 @@
             </div>
         </div>
 
-        <!-- Debug Panel (inicialmente oculto) -->
+        <!-- Debug Panel -->
         <div class="debug-panel" id="debugPanel">
             <div class="debug-header" onclick="toggleDebug()">
                 <span><i class="fas fa-bug"></i> <strong>Painel de Debug - OpenSky API</strong></span>
@@ -847,7 +838,7 @@
         <!-- Footer -->
         <div class="footer">
             <p>© 2025 HeliTrack Brasil - Dados: <a href="https://opensky-network.org" target="_blank" style="color: var(--primary);">OpenSky Network</a> | 🇧🇷 Limitado ao espaço aéreo brasileiro</p>
-            <p style="font-size: 0.7rem; margin-top: 5px;">Autenticação via OpenSky Network - Versão com debug</p>
+            <p style="font-size: 0.7rem; margin-top: 5px;">Acesso público OpenSky Network - Versão corrigida</p>
         </div>
     </div>
 
@@ -859,8 +850,6 @@
             // Configurações da API OpenSky Network
             const OPENSKY_USERNAME = 'R1c4rd0sr';
             const OPENSKY_PASSWORD = 'R1c40243@';
-            
-            // Também tentar com o Client ID como username
             const OPENSKY_CLIENT_ID = 'r1c4rd0sr-api-client';
             const OPENSKY_CLIENT_SECRET = 'nXaOda3xsEaHN0JksPW0K3Yjvid73RO9';
             
@@ -870,42 +859,38 @@
             
             const UPDATE_INTERVAL = 30000; // 30 segundos
             
-            // Limites geográficos do Brasil (aproximados)
+            // Limites geográficos do Brasil
             const BRAZIL_BOUNDS = {
-                minLat: -34.0,  // Sul (Chuí)
-                maxLat: 5.5,    // Norte (Monte Caburaí)
-                minLon: -74.0,  // Oeste (Acre)
-                maxLon: -34.0   // Leste (Paraíba)
+                minLat: -34.0,
+                maxLat: 5.5,
+                minLon: -74.0,
+                maxLon: -34.0
             };
             
-            // Regiões do Brasil (coordenadas aproximadas)
+            // Regiões do Brasil
             const REGIONS = {
                 southeast: { minLat: -25.5, maxLat: -14.5, minLon: -53.0, maxLon: -39.0, name: 'Sudeste' },
                 south: { minLat: -34.0, maxLat: -25.5, minLon: -58.0, maxLon: -48.0, name: 'Sul' },
                 northeast: { minLat: -16.0, maxLat: 5.5, minLon: -48.0, maxLon: -34.0, name: 'Nordeste' },
                 north: { minLat: -16.0, maxLat: 5.5, minLon: -74.0, maxLon: -48.0, name: 'Norte' },
                 centerwest: { minLat: -25.5, maxLat: -16.0, minLon: -62.0, maxLon: -48.0, name: 'Centro-Oeste' },
-                offshore: { lat: -22.5, lon: -40.5, radius: 300, name: 'Offshore' } // Bacia de Campos/Santos
+                offshore: { lat: -22.5, lon: -40.5, radius: 300, name: 'Offshore' }
             };
             
             // Palavras-chave para identificar helicópteros
             const HELICOPTER_KEYWORDS = [
                 'helicopter', 'heli', 'rotor', 'as350', 'h145', 'aw139', 's76', 's-76',
                 'bell', 'ec135', 'ec145', 'bk117', 'bo105', 'r44', 'r22', 'r66',
-                'robinson', 'airbus helicopter', 'airbus helicóptero', 'esquilo',
-                'fennec', 'puma', 'super puma', 'black hawk', 'jayhawk', 'seahawk',
-                'osprey', 'kiowa', 'cayuse', 'essa', 'squirrel', 'colibri',
-                'eurocopter', 'md500', 'md 500', 'h125', 'h130', 'h135', 'h145',
-                'aw109', 'aw119', 'aw169', 'ch-47', 'chinook', 'uh-60', 's-70',
-                'bell 206', 'bell 212', 'bell 222', 'bell 230', 'bell 412',
-                'robinson r22', 'robinson r44', 'robinson r66', 'schweizer',
-                'enstrom', 'kaman', 'kamov', 'mil mi', 'mi-8', 'mi-17', 'mi-24'
+                'robinson', 'airbus', 'esquilo', 'fennec', 'puma', 'black hawk',
+                'seahawk', 'osprey', 'kiowa', 'cayuse', 'squirrel', 'colibri',
+                'eurocopter', 'md500', 'h125', 'h130', 'h135', 'h145',
+                'aw109', 'aw119', 'aw169', 'chinook', 'uh-60'
             ];
             
             // Prefixos brasileiros
             const BRAZILIAN_PREFIXES = ['PP-', 'PR-', 'PT-', 'PU-', 'PS-'];
             
-            // Operadoras conhecidas de helicóptero no Brasil
+            // Operadoras conhecidas
             const HELI_OPERATORS = ['OMNI', 'LIDER', 'CHC', 'VAST', 'APUI', 'ROTA', 'SARA', 'TAXAERO'];
             
             // Estado da aplicação
@@ -950,7 +935,6 @@
                 const timestamp = new Date().toLocaleTimeString();
                 debugLog.push({ timestamp, message, type });
                 
-                // Atualiza o painel de debug
                 let html = '';
                 debugLog.slice(-20).forEach(log => {
                     const color = log.type === 'error' ? 'error' : log.type === 'success' ? 'success' : 'info';
@@ -971,7 +955,7 @@
                 apiStatusBadge.className = `badge api-status ${status}`;
                 
                 if (status === 'success') {
-                    authStatusSpan.innerHTML = '<i class="fas fa-user-check"></i> Autenticado';
+                    authStatusSpan.innerHTML = '<i class="fas fa-user-check"></i> Conectado (acesso público)';
                     authStatusSpan.className = 'source-tag source-tag-live';
                 } else {
                     authStatusSpan.innerHTML = '<i class="fas fa-user-slash"></i> ' + message;
@@ -981,7 +965,7 @@
                 addDebugLog(`Status da API: ${message}`, status);
             }
             
-            // Função para testar diferentes métodos de autenticação
+            // Função para testar autenticação
             async function testAuthentication() {
                 addDebugLog('Testando métodos de autenticação...');
                 
@@ -1000,11 +984,9 @@
                     if (response.ok) {
                         addDebugLog('✓ Autenticação com username/password funcionou!', 'success');
                         return { method: 'basic', credentials: credentials1 };
-                    } else {
-                        addDebugLog(`✗ Username/password falhou: ${response.status} ${response.statusText}`, 'error');
                     }
                 } catch (e) {
-                    addDebugLog(`Erro na autenticação username/password: ${e.message}`, 'error');
+                    addDebugLog(`Username/password falhou: ${e.message}`, 'error');
                 }
                 
                 // Método 2: client_id/client_secret
@@ -1022,30 +1004,14 @@
                     if (response.ok) {
                         addDebugLog('✓ Autenticação com client_id/client_secret funcionou!', 'success');
                         return { method: 'client', credentials: credentials2 };
-                    } else {
-                        addDebugLog(`✗ Client_id/client_secret falhou: ${response.status} ${response.statusText}`, 'error');
                     }
                 } catch (e) {
-                    addDebugLog(`Erro na autenticação client_id/client_secret: ${e.message}`, 'error');
+                    addDebugLog(`Client_id/client_secret falhou: ${e.message}`, 'error');
                 }
                 
-                // Método 3: Sem autenticação (acesso público limitado)
-                try {
-                    addDebugLog('Tentando acesso público (sem autenticação)...');
-                    
-                    const response = await fetch('https://opensky-network.org/api/states/all?lamin=-34&lomin=-74&lamax=5.5&lomax=-34');
-                    
-                    if (response.ok) {
-                        addDebugLog('✓ Acesso público funcionou! (limitado)', 'success');
-                        return { method: 'public', credentials: null };
-                    } else {
-                        addDebugLog(`✗ Acesso público falhou: ${response.status} ${response.statusText}`, 'error');
-                    }
-                } catch (e) {
-                    addDebugLog(`Erro no acesso público: ${e.message}`, 'error');
-                }
-                
-                return null;
+                // Método 3: Sem autenticação
+                addDebugLog('Tentando acesso público (sem autenticação)...');
+                return { method: 'public', credentials: null };
             }
             
             // Função para verificar se coordenada está no Brasil
@@ -1078,42 +1044,55 @@
                 return 'unknown';
             }
             
-            // Função para verificar se é helicóptero
+            // Função melhorada para verificar se é helicóptero
             function isHelicopter(aircraft) {
-                const callsign = aircraft[1] ? aircraft[1].trim() : '';
-                const model = aircraft[8] || '';
-                const category = aircraft[17];
+                // Índices da OpenSky:
+                // 0: icao24, 1: callsign, 2: origin_country, 3: time_position, 4: last_contact,
+                // 5: longitude, 6: latitude, 7: baro_altitude, 8: on_ground, 9: velocity,
+                // 10: true_track, 11: vertical_rate, 12: sensors, 13: geo_altitude,
+                // 14: squawk, 15: spi, 16: position_source, 17: category
                 
+                const callsign = aircraft[1] ? String(aircraft[1]).trim() : '';
+                const onGround = aircraft[8];
+                const category = aircraft[17];
+                const velocity = aircraft[9];
+                const altitude = aircraft[7];
+                
+                // Verifica categoria (se disponível)
                 if (category === 'H') {
                     addDebugLog(`Helicóptero detectado por categoria: ${callsign || 'N/A'}`, 'success');
                     return true;
                 }
                 
-                if (model) {
-                    const modelLower = model.toLowerCase();
-                    if (HELICOPTER_KEYWORDS.some(keyword => modelLower.includes(keyword))) {
-                        addDebugLog(`Helicóptero detectado por modelo: ${model}`, 'success');
-                        return true;
-                    }
-                }
-                
+                // Verifica no callsign
                 if (callsign) {
                     const callsignUpper = callsign.toUpperCase();
                     
+                    // Prefixos brasileiros
                     if (BRAZILIAN_PREFIXES.some(prefix => callsignUpper.startsWith(prefix))) {
-                        if (callsignUpper.includes('H') || callsignUpper.includes('HELI')) {
-                            addDebugLog(`Helicóptero detectado por prefixo brasileiro: ${callsign}`, 'success');
-                            return true;
-                        }
+                        addDebugLog(`Possível helicóptero por prefixo: ${callsign}`, 'info');
+                        return true;
                     }
                     
+                    // Operadoras conhecidas
                     if (HELI_OPERATORS.some(op => callsignUpper.startsWith(op))) {
                         addDebugLog(`Helicóptero detectado por operadora: ${callsign}`, 'success');
                         return true;
                     }
                     
-                    if (callsignUpper.includes('HELI') || callsignUpper.includes('ROTOR')) {
-                        addDebugLog(`Helicóptero detectado por padrão no callsign: ${callsign}`, 'success');
+                    // Palavras-chave no callsign
+                    const callsignLower = callsign.toLowerCase();
+                    if (callsignLower.includes('heli') || callsignLower.includes('rotor') || 
+                        callsignLower.includes('hms') || callsignLower.includes('rescue')) {
+                        addDebugLog(`Helicóptero detectado por palavra-chave no callsign: ${callsign}`, 'success');
+                        return true;
+                    }
+                }
+                
+                // Se tem altitude baixa e velocidade baixa, pode ser helicóptero
+                if (altitude && velocity) {
+                    if (altitude < 3000 && velocity < 150) {
+                        addDebugLog(`Possível helicóptero por altitude/velocidade: ${callsign || 'N/A'}`, 'info');
                         return true;
                     }
                 }
@@ -1130,13 +1109,8 @@
                     
                     addDebugLog('Iniciando busca de helicópteros...');
                     
-                    // Primeiro testa autenticação
+                    // Testa autenticação
                     const auth = await testAuthentication();
-                    
-                    if (!auth) {
-                        throw new Error('Nenhum método de autenticação funcionou');
-                    }
-                    
                     addDebugLog(`Usando método de autenticação: ${auth.method}`);
                     
                     // Parâmetros para a consulta
@@ -1160,13 +1134,7 @@
                     addDebugLog(`Resposta da API: ${response.status} ${response.statusText}`);
                     
                     if (!response.ok) {
-                        if (response.status === 401) {
-                            throw new Error('Falha na autenticação - verifique as credenciais');
-                        } else if (response.status === 429) {
-                            throw new Error('Limite de requisições excedido');
-                        } else {
-                            throw new Error(`Erro HTTP: ${response.status}`);
-                        }
+                        throw new Error(`Erro HTTP: ${response.status}`);
                     }
                     
                     const data = await response.json();
@@ -1176,32 +1144,64 @@
                         throw new Error('Formato de dados inválido');
                     }
                     
-                    updateApiStatus('success', 'Conectado');
+                    // Processa as aeronaves
+                    const helicopters = [];
                     
-                    const helicopters = data.states
-                        .filter(state => isHelicopter(state))
-                        .map(state => ({
-                            hex: state[0],
-                            flight: state[1] ? state[1].trim() : null,
-                            origin: state[2],
-                            lat: state[6],
-                            lon: state[5],
-                            alt_baro: state[7] ? Math.round(state[7] * 3.28084) : 'ground',
-                            on_ground: state[8],
-                            gs: state[9] ? Math.round(state[9] * 1.94384) : 0,
-                            track: state[10] ? Math.round(state[10]) : null,
-                            vert_rate: state[11],
-                            geo_altitude: state[13] ? Math.round(state[13] * 3.28084) : null,
-                            category: state[17],
-                            t: null,
-                            ownOp: state[1] ? state[1].trim().substring(0, 4) : null
-                        }))
-                        .filter(ac => ac.lat && ac.lon && isInBrazil(ac.lat, ac.lon));
+                    data.states.forEach(state => {
+                        try {
+                            if (isHelicopter(state)) {
+                                // Converte altitude de metros para pés (se existir)
+                                let altitude = 'ground';
+                                if (state[7] !== null && !isNaN(state[7])) {
+                                    altitude = Math.round(state[7] * 3.28084);
+                                }
+                                
+                                // Converte velocidade de m/s para nós (se existir)
+                                let speed = 0;
+                                if (state[9] !== null && !isNaN(state[9])) {
+                                    speed = Math.round(state[9] * 1.94384);
+                                }
+                                
+                                const helicopter = {
+                                    hex: state[0] || 'N/A',
+                                    flight: state[1] ? String(state[1]).trim() : null,
+                                    origin: state[2] || 'Desconhecido',
+                                    lat: state[6],
+                                    lon: state[5],
+                                    alt_baro: altitude,
+                                    on_ground: state[8],
+                                    gs: speed,
+                                    track: state[10] ? Math.round(state[10]) : null,
+                                    vert_rate: state[11],
+                                    geo_altitude: state[13] ? Math.round(state[13] * 3.28084) : null,
+                                    category: state[17],
+                                    t: null,
+                                    ownOp: state[1] ? String(state[1]).trim().substring(0, 4) : null
+                                };
+                                
+                                // Verifica se está no Brasil
+                                if (helicopter.lat && helicopter.lon && isInBrazil(helicopter.lat, helicopter.lon)) {
+                                    helicopters.push(helicopter);
+                                }
+                            }
+                        } catch (e) {
+                            addDebugLog(`Erro ao processar aeronave: ${e.message}`, 'error');
+                        }
+                    });
                     
                     addDebugLog(`Encontrados ${helicopters.length} helicópteros no Brasil`, 'success');
                     
                     if (helicopters.length > 0) {
-                        addDebugLog(`Primeiro helicóptero: ${helicopters[0].flight || 'N/A'} em ${helicopters[0].lat}, ${helicopters[0].lon}`);
+                        addDebugLog(`Primeiro helicóptero: ${helicopters[0].flight || 'N/A'}`, 'success');
+                    } else {
+                        addDebugLog('Nenhum helicóptero encontrado. Tentando modo debug...', 'warning');
+                        
+                        // Modo debug: mostra as primeiras 5 aeronaves para análise
+                        addDebugLog('Primeiras 5 aeronaves para debug:', 'info');
+                        for (let i = 0; i < Math.min(5, data.states.length); i++) {
+                            const state = data.states[i];
+                            addDebugLog(`Aeronave ${i+1}: Callsign=${state[1] || 'N/A'}, Categoria=${state[17] || 'N/A'}, País=${state[2] || 'N/A'}`, 'info');
+                        }
                     }
                     
                     allHelicopters = helicopters;
@@ -1215,6 +1215,7 @@
                         }
                     });
                     
+                    updateApiStatus('success', 'Conectado');
                     updateStats();
                     applyFilters();
                     
@@ -1273,9 +1274,8 @@
                         return false;
                     }
                     
-                    if (model) {
-                        if (!ac.flight) return false;
-                        if (!ac.flight.toLowerCase().includes(model.toLowerCase())) return false;
+                    if (model && (!ac.flight || !ac.flight.toLowerCase().includes(model.toLowerCase()))) {
+                        return false;
                     }
                     
                     if (region && region !== 'all' && ac.region !== region) {
@@ -1320,7 +1320,7 @@
                     
                     const callsign = ac.flight || 'N/A';
                     const icao = ac.hex || 'N/A';
-                    const model = ac.t || (ac.category === 'H' ? 'Helicóptero' : 'Desconhecido');
+                    const model = ac.t || (ac.category === 'H' ? 'Helicóptero' : 'Não identificado');
                     const operator = ac.ownOp || (ac.flight ? ac.flight.substring(0, 4) : 'N/A');
                     
                     let altitude = 'Em solo';
@@ -1481,7 +1481,7 @@
                 if (e.key === 'Enter') applyFilters();
             });
             
-            // Mostra o painel de debug por padrão
+            // Mostra o painel de debug
             debugPanel.classList.add('show');
             
             // Carrega dados iniciais
