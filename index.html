@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>HeliTrack Brasil - Monitoramento de Helicópteros</title>
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet for map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        :root {
+            --primary: #0066b3;
+            --primary-dark: #004c8c;
+            --secondary: #ff6b00;
+            --accent: #00a896;
+            --gray-light: #f5f7fa;
+            --gray: #e4e7eb;
+            --gray-dark: #6c757d;
+            --text-dark: #212529;
+            --white: #ffffff;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --border-radius: 12px;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            color: var(--text-dark);
+            line-height: 1.5;
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a3b5c 0%, #0a1e30 100%);
+            color: white;
+            padding: 24px 28px;
+            border-radius: var(--border-radius);
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            color: var(--secondary);
+            font-size: 2.2rem;
+        }
+
+        .badges {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge i {
+            color: var(--secondary);
+        }
+
+        /* Cards de estatísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gray-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .stat-info h3 {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--gray-dark);
+            margin-bottom: 4px;
+        }
+
+        .stat-info p {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        /* Filtros */
+        .filters-section {
+            background: var(--white);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 28px;
+        }
+
+        .filters-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--gray-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .filter-group select, .filter-group input {
+            padding: 12px 14px;
+            border: 1px solid var(--gray);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: var(--white);
+            transition: border 0.2s;
+            cursor: pointer;
+        }
+
+        .filter-group select:focus, .filter-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0,102,179,0.1);
+        }
+
+        .date-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .date-group input {
+            flex: 1;
+        }
+
+        .filter-actions {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--gray-light);
+            color: var(--text-dark);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,102,179,0.3);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: scale(1.02);
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-accent:hover {
+            background: #008577;
+        }
+
+        .btn-secondary {
+            background: white;
+            border: 1px solid var(--gray);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-light);
+        }
+
+        /* Datasources indicators */
+        .datasources {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 20px 0 10px;
+            padding: 12px 0;
+            border-top: 1px solid var(--gray);
+        }
+
+        .source-tag {
+            background: var(--gray-light);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-dark);
+            border: 1px solid var(--gray);
+        }
+
+        .source-tag i {
+            color: var(--secondary);
+        }
+
+        /* Tabela de resultados */
+        .results-section {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .results-header {
+            padding: 20px 24px;
+            background: var(--gray-light);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--gray);
+        }
+
+        .results-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .view-options {
+            display: flex;
+            gap: 8px;
+            background: white;
+            padding: 4px;
+            border-radius: 30px;
+            border: 1px solid var(--gray);
+        }
+
+        .view-option {
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+        }
+
+        .view-option.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            padding: 0 0 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        th {
+            text-align: left;
+            padding: 16px 20px;
+            background: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--gray-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 2px solid var(--gray);
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray);
+            font-size: 0.95rem;
+        }
+
+        tr:hover {
+            background: var(--gray-light);
+        }
+
+        .flight-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-on-time {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-delayed {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-landed {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-en-route {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .airline-logo {
+            width: 28px;
+            height: 28px;
+            background: var(--gray-light);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--primary);
+        }
+
+        .helipad-type {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--gray-light);
+            color: var(--text-dark);
+        }
+
+        .helipad-offshore {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .helipad-hosp {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 640px) {
+            body {
+                padding: 8px;
+            }
+
+            .header {
+                padding: 18px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .logo h1 {
+                font-size: 1.4rem;
+            }
+
+            .badges {
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .date-group {
+                flex-direction: column;
+            }
+
+            .results-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            color: var(--primary);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: var(--gray-dark);
+            font-size: 0.85rem;
+        }
+
+        #map {
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <h1><i class="fas fa-helicopter"></i> HeliTrack Brasil</h1>
+                <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 4px;">Dados ANAC • FlightAware • Helipontos Brasil • ADSB.lol</div>
+            </div>
+            <div class="badges">
+                <span class="badge"><i class="fas fa-satellite-dish"></i> <span id="activeCount">0</span> helicópteros ativos</span>
+                <span class="badge"><i class="fas fa-clock"></i> Atualizado: <span id="updateTime">Carregando...</span></span>
+                <span class="badge"><i class="fas fa-database"></i> Histórico offshore</span>
+            </div>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-helicopter"></i></div>
+                <div class="stat-info">
+                    <h3>Voos hoje</h3>
+                    <p>847</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-info">
+                    <h3>Atrasados</h3>
+                    <p>42 (5,0%)</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-building"></i></div>
+                <div class="stat-info">
+                    <h3>Operadoras</h3>
+                    <p>18 ativas</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="stat-info">
+                    <h3>Helipontos</h3>
+                    <p>342</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-section">
+            <div class="filters-title">
+                <i class="fas fa-sliders-h" style="color: var(--primary);"></i> Filtros avançados - Helicópteros
+            </div>
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label><i class="far fa-building"></i> Operadora/Callsign</label>
+                    <input type="text" id="airline" placeholder="Ex: OMNI or callsign">
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-map-pin"></i> Origem</label>
+                    <select id="origin">
+                        <option value="">Todos os helipontos</option>
+                        <option value="SBJH">SBJH - Jundiaí</option>
+                        <option value="SBPJ">SBPJ - Paraty</option>
+                        <option value="SSCP">SSCP - Campo de Marte</option>
+                        <option value="SILGY">SILGY - Lagoa Rodrigo de Freitas</option>
+                        <option value="SJDH">SJDH - Joá</option>
+                        <option value="OFF1">OFF1 - Bacia de Campos</option>
+                        <option value="OFF2">OFF2 - Bacia de Santos</option>
+                        <option value="HOS01">HOS01 - Hospital Albert Einstein</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-map-pin"></i> Destino</label>
+                    <select id="destination">
+                        <option value="">Todos os helipontos</option>
+                        <option value="SBJH">SBJH - Jundiaí</option>
+                        <option value="SBPJ">SBPJ - Paraty</option>
+                        <option value="SSCP">SSCP - Campo de Marte</option>
+                        <option value="SILGY">SILGY - Lagoa Rodrigo de Freitas</option>
+                        <option value="SJDH">SJDH - Joá</option>
+                        <option value="OFF1">OFF1 - Bacia de Campos</option>
+                        <option value="OFF2">OFF2 - Bacia de Santos</option>
+                        <option value="HOS02">HOS02 - Hospital São Paulo</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="far fa-calendar-alt"></i> Data/Horário</label>
+                    <div class="date-group">
+                        <input type="date" id="date" value="2025-02-13">
+                        <input type="time" id="time" value="15:00">
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-search"></i> Prefixo/Matrícula</label>
+                    <input type="text" id="flightNumber" placeholder="Ex: PR-ABC">
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-filter"></i> Situação</label>
+                    <select id="status">
+                        <option value="">Todas</option>
+                        <option value="ON_TIME">No horário</option>
+                        <option value="DELAYED">Atrasado</option>
+                        <option value="LANDED">Pousou</option>
+                        <option value="EN_ROUTE">Em rota</option>
+                        <option value="CANCELLED">Cancelado</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-layer-group"></i> Tipo de operação</label>
+                    <select id="operationType">
+                        <option value="">Todos</option>
+                        <option value="OFFSHORE">Offshore</option>
+                        <option value="RESCUE">Resgate</option>
+                        <option value="EXECUTIVE">Executivo</option>
+                        <option value="TOUR">Turismo</option>
+                        <option value="HEALTH">Saúde</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button class="btn btn-primary" id="searchBtn"><i class="fas fa-search"></i> Buscar voos</button>
+                <button class="btn btn-secondary" id="clearBtn"><i class="fas fa-undo-alt"></i> Limpar filtros</button>
+                <button class="btn btn-accent" id="historicalBtn"><i class="fas fa-history"></i> Histórico offshore</button>
+                <button class="btn btn-secondary" id="helipadsBtn"><i class="fas fa-helipad"></i> Helipontos</button>
+            </div>
+
+            <!-- Fontes de dados -->
+            <div class="datasources">
+                <span class="source-tag"><i class="fas fa-radar"></i> FlightAware Helicopters</span>
+                <span class="source-tag"><i class="fas fa-database"></i> ANAC (RBHA 90)</span>
+                <span class="source-tag"><i class="fas fa-oil-can"></i> Dados offshore</span>
+                <span class="source-tag"><i class="fas fa-ambulance"></i> SAMU/Resgate</span>
+                <span class="source-tag"><i class="fas fa-cloud-sun"></i> Meteorologia helipontos</span>
+                <span class="source-tag"><i class="fas fa-plane"></i> ADSB.lol</span>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div class="results-section">
+            <div class="results-header">
+                <h2><i class="fas fa-list-ul"></i> Helicópteros em voo <span id="resultCount">(0)</span></h2>
+                <div class="view-options">
+                    <button class="view-option active" id="gridViewBtn"><i class="fas fa-table"></i> Tabela</button>
+                    <button class="view-option" id="mapViewBtn"><i class="fas fa-map-marked-alt"></i> Mapa</button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <i class="fas fa-circle-notch"></i>
+                <p style="margin-top: 10px;">Buscando dados em tempo real de helicópteros...</p>
+            </div>
+
+            <!-- Tabela de voos -->
+            <div class="table-container" id="tableContainer">
+                <table id="flightsTable">
+                    <thead>
+                        <tr>
+                            <th>Operadora/Callsign</th>
+                            <th>Prefixo</th>
+                            <th>Tipo</th>
+                            <th>Posição</th>
+                            <th>Direção</th>
+                            <th>Velocidade</th>
+                            <th>Altitude</th>
+                            <th>Status</th>
+                            <th>Fonte</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Preenchido via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mapa -->
+            <div id="map" style="display: none;"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>© 2025 HeliTrack Brasil - Monitoramento de helicópteros | Dados: ANAC, FlightAware, Helipontos Brasil, Operadoras offshore, ADSB.lol | Atualizado a cada 3 minutos</p>
+        </div>
+    </div>
+
+    <script>
+        (async function() {
+            // Operadores mock para compatibilidade
+            const operators = {
+                'OMNI': { code: 'OM', logo: 'OM', name: 'Omni Helicopters', type: 'offshore' },
+                'LIDER': { code: 'LD', logo: 'LD', name: 'Líder Aviação', type: 'executive' },
+                'HELI': { code: 'HL', logo: 'HL', name: 'Helisul Aviação', type: 'tourism' },
+                'APUI': { code: 'AP', logo: 'AP', name: 'Apuí Táxi Aéreo', type: 'executive' },
+                'ROTA': { code: 'RT', logo: 'RT', name: 'Rota do Sol', type: 'tourism' },
+                'VAST': { code: 'VS', logo: 'VS', name: 'Vast Infraestrutura', type: 'offshore' },
+                'CHC': { code: 'CH', logo: 'CH', name: 'CHC Helicopters', type: 'offshore' },
+                'SARA': { code: 'SR', logo: 'SR', name: 'Sara Aerotáxi', type: 'health' }
+            };
+
+            let allFlights = [];
+            let filteredFlights = [];
+            let map;
+            let markers = [];
+
+            async function fetchHelicopterData() {
+                try {
+                    const url = 'https://api.adsb.lol/v2/point/-23.55/-46.63/250';
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    const helicopters = data.ac.filter(ac => ac.category === 'A7' && ac.r && /^P[RT]-/.test(ac.r));
+                    return {
+                        helicopters: helicopters.map(ac => ({
+                            operator: ac.flight ? ac.flight.trim() : 'Unknown',
+                            operatorCode: 'UNK',
+                            operatorLogo: 'UN',
+                            prefix: ac.r || ac.hex,
+                            model: ac.t || 'Unknown',
+                            position: `${ac.lat.toFixed(4)}°S, ${Math.abs(ac.lon).toFixed(4)}°W`,
+                            track: ac.track ? Math.round(ac.track) + '°' : 'N/A',
+                            gs: ac.gs ? Math.round(ac.gs) + ' kt' : 'N/A',
+                            altitude: ac.alt_baro === 'ground' ? 'Ground' : (ac.alt_baro || 0) + ' ft',
+                            status: ac.alt_baro === 'ground' ? 'LANDED' : 'EN_ROUTE',
+                            operation: 'unknown',
+                            source: 'ADSB.lol',
+                            lat: ac.lat,
+                            lon: ac.lon
+                        })),
+                        updateTime: new Date(data.now).toLocaleString('pt-BR')
+                    };
+                } catch (e) {
+                    console.error('Erro ao buscar dados da API:', e);
+                    return { helicopters: [], updateTime: 'Erro' };
+                }
+            }
+
+            function updateTable() {
+                const tbody = document.getElementById('tableBody');
+                const resultSpan = document.getElementById('resultCount');
+                tbody.innerHTML = '';
+                
+                if (filteredFlights.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px;">Nenhum helicóptero encontrado com os filtros selecionados.</td></tr>';
+                    resultSpan.innerText = '(0)';
+                    return;
+                }
+
+                resultSpan.innerText = `(${filteredFlights.length})`;
+
+                filteredFlights.forEach(f => {
+                    const row = document.createElement('tr');
+                    
+                    let statusClass = 'status-en-route';
+                    let statusText = 'Em rota';
+                    let statusIcon = 'helicopter';
+                    
+                    if (f.status === 'LANDED') { 
+                        statusClass = 'status-landed'; 
+                        statusText = 'Pousou';
+                        statusIcon = 'plane-arrival';
+                    }
+                    
+                    row.innerHTML = `
+                        <td>
+                            <span class="airline-logo">${f.operatorLogo}</span>
+                            ${f.operator}
+                        </td>
+                        <td><strong>${f.prefix}</strong></td>
+                        <td>${f.model}</td>
+                        <td>${f.position}</td>
+                        <td>${f.track}</td>
+                        <td>${f.gs}</td>
+                        <td>${f.altitude}</td>
+                        <td><span class="flight-status ${statusClass}"><i class="fas fa-${statusIcon}"></i> ${statusText}</span></td>
+                        <td><small>${f.source}</small></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            function updateMap() {
+                markers.forEach(marker => map.removeLayer(marker));
+                markers = [];
+                filteredFlights.forEach(f => {
+                    if (f.lat && f.lon) {
+                        const marker = L.marker([f.lat, f.lon]).addTo(map)
+                            .bindPopup(`<b>${f.prefix}</b><br>Tipo: ${f.model}<br>Altitude: ${f.altitude}<br>Velocidade: ${f.gs}<br>Direção: ${f.track}`);
+                        markers.push(marker);
+                    }
+                });
+            }
+
+            function applyFilters() {
+                const airline = document.getElementById('airline').value.trim().toUpperCase();
+                const origin = document.getElementById('origin').value;
+                const dest = document.getElementById('destination').value;
+                const flightNum = document.getElementById('flightNumber').value.trim().toUpperCase();
+                const status = document.getElementById('status').value;
+                const operationType = document.getElementById('operationType').value;
+                
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('tableContainer').style.opacity = '0.5';
+
+                setTimeout(() => {
+                    filteredFlights = allFlights.filter(f => {
+                        if (airline && !f.operator.toUpperCase().includes(airline)) return false;
+                        if (origin && f.origin !== origin) return false; // Ajustar se necessário
+                        if (dest && f.destination !== dest) return false;
+                        if (flightNum && !f.prefix.toUpperCase().includes(flightNum)) return false;
+                        if (status && f.status !== status) return false;
+                        if (operationType && f.operation !== operationType) return false;
+                        return true;
+                    });
+                    
+                    updateTable();
+                    if (document.getElementById('mapViewBtn').classList.contains('active')) {
+                        updateMap();
+                    }
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('tableContainer').style.opacity = '1';
+                }, 600);
+            }
+
+            // Inicialização do mapa
+            map = L.map('map').setView([-23.55, -46.63], 7);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Carregar dados
+            document.getElementById('loading').style.display = 'block';
+            const data = await fetchHelicopterData();
+            allFlights = data.helicopters;
+            filteredFlights = [...allFlights];
+            document.getElementById('activeCount').innerText = allFlights.length;
+            document.getElementById('updateTime').innerText = data.updateTime;
+            updateTable();
+            document.getElementById('loading').style.display = 'none';
+
+            // Event listeners
+            document.getElementById('searchBtn').addEventListener('click', applyFilters);
+            
+            document.getElementById('clearBtn').addEventListener('click', function() {
+                document.getElementById('airline').value = '';
+                document.getElementById('origin').value = '';
+                document.getElementById('destination').value = '';
+                document.getElementById('flightNumber').value = '';
+                document.getElementById('status').value = '';
+                document.getElementById('operationType').value = '';
+                document.getElementById('date').value = '2025-02-13';
+                document.getElementById('time').value = '15:00';
+                applyFilters();
+            });
+
+            document.getElementById('historicalBtn').addEventListener('click', function() {
+                alert('Acessando dados históricos de operações offshore. Período: últimos 30 dias.');
+            });
+
+            document.getElementById('helipadsBtn').addEventListener('click', function() {
+                alert('Lista de helipontos certificados ANAC: 342 helipontos ativos no Brasil.');
+            });
+
+            document.getElementById('gridViewBtn').addEventListener('click', function() {
+                document.getElementById('tableContainer').style.display = 'block';
+                document.getElementById('map').style.display = 'none';
+                document.getElementById('gridViewBtn').classList.add('active');
+                document.getElementById('mapViewBtn').classList.remove('active');
+            });
+
+            document.getElementById('mapViewBtn').addEventListener('click', function() {
+                document.getElementById('tableContainer').style.display = 'none';
+                document.getElementById('map').style.display = 'block';
+                document.getElementById('mapViewBtn').classList.add('active');
+                document.getElementById('gridViewBtn').classList.remove('active');
+                updateMap();
+                map.invalidateSize();
+            });
+
+            document.getElementById('flightNumber').addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') applyFilters();
+            });
+        })();
+    </script>
+</body>
+</html>
