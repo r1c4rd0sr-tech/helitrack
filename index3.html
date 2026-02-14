@@ -1,0 +1,1587 @@
+Analise o código abaixo e transforme esse sistema em um sistema de monitoramento de vôos de helicópteros, incorporando o seguite codigo para aquiição de daos:
+
+   curl --request POST \
+	--url 'https://aerodatabox.p.rapidapi.com/subscriptions/webhook/FlightByNumber/KL1395?useCredits=false' \
+	--header 'Content-Type: application/json' \
+	--header 'x-rapidapi-host: aerodatabox.p.rapidapi.com' \
+	--header 'x-rapidapi-key: e09f3391demsh1953622dc1b4488p1f57f1jsn9ea218884ae1' \
+	--data '{"url":"http://your-url","maxDeliveryRetries":0}'
+
+
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>HeliTrack Brasil - Helicópteros no Espaço Aéreo Brasileiro</title>
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS para mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        :root {
+            --primary: #0066b3;
+            --primary-dark: #004c8c;
+            --secondary: #ff6b00;
+            --accent: #00a896;
+            --gray-light: #f5f7fa;
+            --gray: #e4e7eb;
+            --gray-dark: #6c757d;
+            --text-dark: #212529;
+            --white: #ffffff;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --border-radius: 12px;
+            --brazil-green: #009c3b;
+            --brazil-yellow: #ffdf00;
+            --brazil-blue: #002776;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            color: var(--text-dark);
+            line-height: 1.5;
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--brazil-green) 0%, var(--brazil-blue) 100%);
+            color: white;
+            padding: 24px 28px;
+            border-radius: var(--border-radius);
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::after {
+            content: "🇧🇷";
+            position: absolute;
+            right: 20px;
+            bottom: 10px;
+            font-size: 3rem;
+            opacity: 0.1;
+            transform: rotate(-10deg);
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            color: var(--brazil-yellow);
+            font-size: 2.2rem;
+        }
+
+        .badges {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge i {
+            color: var(--brazil-yellow);
+        }
+
+        /* Cards de estatísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gray-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .stat-info h3 {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--gray-dark);
+            margin-bottom: 4px;
+        }
+
+        .stat-info p {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        /* Filtros */
+        .filters-section {
+            background: var(--white);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 28px;
+        }
+
+        .filters-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--gray-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .filter-group select, .filter-group input {
+            padding: 12px 14px;
+            border: 1px solid var(--gray);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: var(--white);
+            transition: border 0.2s;
+            cursor: pointer;
+        }
+
+        .filter-group select:focus, .filter-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0,102,179,0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--gray-light);
+            color: var(--text-dark);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,102,179,0.3);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: scale(1.02);
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-accent:hover {
+            background: #008577;
+        }
+
+        .btn-secondary {
+            background: white;
+            border: 1px solid var(--gray);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-light);
+        }
+
+        /* Datasources indicators */
+        .datasources {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 20px 0 10px;
+            padding: 12px 0;
+            border-top: 1px solid var(--gray);
+        }
+
+        .source-tag {
+            background: var(--gray-light);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-dark);
+            border: 1px solid var(--gray);
+        }
+
+        .source-tag i {
+            color: var(--secondary);
+        }
+
+        .source-tag-live {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .source-tag-live i {
+            color: #28a745;
+        }
+
+        .source-tag-brazil {
+            background: linear-gradient(135deg, #009c3b20, #ffdf0020, #00277620);
+            border-color: var(--brazil-blue);
+            color: var(--brazil-blue);
+            font-weight: 600;
+        }
+
+        /* Tabela de resultados */
+        .results-section {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .results-header {
+            padding: 20px 24px;
+            background: var(--gray-light);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--gray);
+        }
+
+        .results-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .view-options {
+            display: flex;
+            gap: 8px;
+            background: white;
+            padding: 4px;
+            border-radius: 30px;
+            border: 1px solid var(--gray);
+        }
+
+        .view-option {
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+        }
+
+        .view-option.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            padding: 0 0 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        th {
+            text-align: left;
+            padding: 16px 20px;
+            background: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--gray-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 2px solid var(--gray);
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray);
+            font-size: 0.95rem;
+        }
+
+        tr:hover {
+            background: var(--gray-light);
+        }
+
+        .flight-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-flying {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-ground {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .airline-logo {
+            width: 28px;
+            height: 28px;
+            background: var(--gray-light);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--primary);
+        }
+
+        .brazil-flag {
+            display: inline-block;
+            margin-left: 5px;
+            font-size: 1.2rem;
+        }
+
+        .last-update {
+            font-size: 0.8rem;
+            color: var(--gray-dark);
+            margin-left: 10px;
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #28a745;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Mapa */
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: var(--border-radius);
+            z-index: 1;
+        }
+
+        .map-container {
+            padding: 20px;
+            display: none;
+        }
+
+        .map-controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 640px) {
+            body {
+                padding: 8px;
+            }
+
+            .header {
+                padding: 18px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .logo h1 {
+                font-size: 1.4rem;
+            }
+
+            .badges {
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .results-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            #map {
+                height: 400px;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            color: var(--primary);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: var(--gray-dark);
+            font-size: 0.85rem;
+        }
+
+        /* Detalhes da aeronave */
+        .aircraft-detail {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .detail-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .detail-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray-dark);
+        }
+
+        .detail-close:hover {
+            color: var(--text-dark);
+        }
+
+        .detail-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        .detail-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            padding: 10px;
+            background: var(--gray-light);
+            border-radius: 8px;
+        }
+
+        .detail-label {
+            font-size: 0.8rem;
+            color: var(--gray-dark);
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .detail-icao {
+            font-family: monospace;
+            background: var(--gray);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .clickable-row {
+            cursor: pointer;
+        }
+
+        .clickable-row:hover {
+            background: var(--gray-light);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <h1><i class="fas fa-helicopter"></i> HeliTrack Brasil <span class="live-indicator"></span></h1>
+                <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 4px;">🇧🇷 Helicópteros no espaço aéreo brasileiro</div>
+            </div>
+            <div class="badges">
+                <span class="badge" id="activeFlightsBadge"><i class="fas fa-satellite-dish"></i> Carregando...</span>
+                <span class="badge" id="updateTimeBadge"><i class="fas fa-clock"></i> <span id="lastUpdateTime">-</span></span>
+                <span class="badge source-tag-brazil"><i class="fas fa-map-marker-alt"></i> Somente Brasil</span>
+            </div>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-helicopter"></i></div>
+                <div class="stat-info">
+                    <h3>Helicópteros no Brasil</h3>
+                    <p id="totalHelicopters">-</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="stat-info">
+                    <h3>Com posição GPS</h3>
+                    <p id="withPosition">-</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-building"></i></div>
+                <div class="stat-info">
+                    <h3>Operadoras</h3>
+                    <p id="totalOperators">-</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+                <div class="stat-info">
+                    <h3>Em voo</h3>
+                    <p id="inFlight">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-section">
+            <div class="filters-title">
+                <i class="fas fa-sliders-h" style="color: var(--primary);"></i> Filtros - Espaço Aéreo Brasileiro
+            </div>
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label><i class="fas fa-tag"></i> Prefixo / Callsign</label>
+                    <input type="text" id="callsignFilter" placeholder="Ex: PR-ABC">
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-plane"></i> Modelo</label>
+                    <select id="modelFilter">
+                        <option value="">Todos os modelos</option>
+                        <option value="AS350">AS350 Esquilo</option>
+                        <option value="H145">H145</option>
+                        <option value="AW139">AW139</option>
+                        <option value="S76">S-76</option>
+                        <option value="Bell 407">Bell 407</option>
+                        <option value="Bell 429">Bell 429</option>
+                        <option value="EC135">EC135</option>
+                        <option value="R44">R44 Raven</option>
+                        <option value="R66">R66</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-city"></i> Região</label>
+                    <select id="regionFilter">
+                        <option value="">Todas as regiões</option>
+                        <option value="southeast">Sudeste</option>
+                        <option value="south">Sul</option>
+                        <option value="northeast">Nordeste</option>
+                        <option value="north">Norte</option>
+                        <option value="centerwest">Centro-Oeste</option>
+                        <option value="offshore">Offshore (Plataformas)</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-ruler-vertical"></i> Altitude</label>
+                    <select id="altitudeFilter">
+                        <option value="all">Todas</option>
+                        <option value="ground">Em solo</option>
+                        <option value="low">Baixa (até 1000 ft)</option>
+                        <option value="medium">Média (1000-5000 ft)</option>
+                        <option value="high">Alta (>5000 ft)</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-tachometer-alt"></i> Velocidade</label>
+                    <select id="speedFilter">
+                        <option value="all">Todas</option>
+                        <option value="hover">Hover/Parado</option>
+                        <option value="slow">Lenta (0-50 kt)</option>
+                        <option value="cruise">Cruzeiro (50-120 kt)</option>
+                        <option value="fast">Rápida (>120 kt)</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-bolt"></i> Status</label>
+                    <select id="statusFilter">
+                        <option value="all">Todos</option>
+                        <option value="flying">Em voo</option>
+                        <option value="ground">Em solo</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button class="btn btn-primary" id="searchBtn"><i class="fas fa-search"></i> Aplicar filtros</button>
+                <button class="btn btn-secondary" id="clearBtn"><i class="fas fa-undo-alt"></i> Limpar</button>
+                <button class="btn btn-accent" id="refreshBtn"><i class="fas fa-sync-alt"></i> Atualizar dados</button>
+            </div>
+
+            <!-- Fontes de dados -->
+            <div class="datasources">
+                <span class="source-tag source-tag-live"><i class="fas fa-radar"></i> adsb.lol API</span>
+                <span class="source-tag source-tag-brazil"><i class="fas fa-map-pin"></i> Filtro geográfico Brasil</span>
+                <span class="source-tag"><i class="fas fa-database"></i> Licença ODbL</span>
+                <span class="source-tag"><i class="fas fa-chart-line"></i> Atualização 60s</span>
+                <span class="source-tag"><i class="fas fa-plane"></i> <span id="totalAircraft">0</span> aeronaves totais</span>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div class="results-section">
+            <div class="results-header">
+                <h2><i class="fas fa-list-ul"></i> Helicópteros no Brasil <span id="resultCount">(0)</span></h2>
+                <div class="view-options">
+                    <button class="view-option active" id="gridViewBtn"><i class="fas fa-table"></i> Tabela</button>
+                    <button class="view-option" id="mapViewBtn"><i class="fas fa-map-marked-alt"></i> Mapa</button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <i class="fas fa-circle-notch"></i>
+                <p style="margin-top: 10px;">Buscando helicópteros no espaço aéreo brasileiro...</p>
+                <p style="font-size: 0.9rem; color: var(--gray-dark); margin-top: 8px;">A primeira carga pode levar até 60 segundos</p>
+            </div>
+
+            <!-- Tabela de voos -->
+            <div class="table-container" id="tableContainer">
+                <table id="flightsTable">
+                    <thead>
+                        <tr>
+                            <th>Prefixo</th>
+                            <th>ICAO</th>
+                            <th>Modelo</th>
+                            <th>Operadora</th>
+                            <th>Altitude</th>
+                            <th>Velocidade</th>
+                            <th>Direção</th>
+                            <th>Posição</th>
+                            <th>Região</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="10" style="text-align:center; padding:40px;">
+                                <i class="fas fa-helicopter" style="font-size: 2rem; color: var(--gray-dark); margin-bottom: 10px;"></i>
+                                <p>Clique em "Atualizar dados" para carregar helicópteros no espaço aéreo brasileiro</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mapa -->
+            <div id="mapContainer" class="map-container">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <button class="btn btn-secondary" id="fitBrazilBtn"><i class="fas fa-globe-americas"></i> Ver todo Brasil</button>
+                    <span class="source-tag source-tag-live"><i class="fas fa-map-pin"></i> <span id="mapMarkersCount">0</span> helicópteros no mapa</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de detalhes -->
+        <div class="aircraft-detail" id="aircraftDetail">
+            <div class="detail-card">
+                <span class="detail-close" id="detailClose">&times;</span>
+                <h2 class="detail-title" id="detailTitle">Detalhes da Aeronave</h2>
+                <div class="detail-info" id="detailInfo">
+                    <!-- Preenchido via JS -->
+                </div>
+                <div id="detailExtra" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--gray);">
+                    <!-- Informações adicionais -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>© 2025 HeliTrack Brasil - Dados: <a href="https://api.adsb.lol" target="_blank" style="color: var(--primary);">adsb.lol</a> (licença ODbL) | 🇧🇷 Limitado ao espaço aéreo brasileiro</p>
+            <p style="font-size: 0.7rem; margin-top: 5px;">v2.0 - Integração completa com API | <span id="apiStatus"></span></p>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        (function() {
+            // Configurações da API
+            const API_BASE_URL = 'https://api.adsb.lol';
+            const UPDATE_INTERVAL = 60000; // AUMENTADO PARA 60 SEGUNDOS - maior tempo de espera
+            
+            // Timeout maior para requisições fetch (30 segundos)
+            const FETCH_TIMEOUT = 30000; // 30 segundos
+            
+            // Limites geográficos do Brasil (aproximados)
+            const BRAZIL_BOUNDS = {
+                minLat: -34.0,  // Sul (Chuí)
+                maxLat: 5.5,    // Norte (Monte Caburaí)
+                minLon: -74.0,  // Oeste (Acre)
+                maxLon: -34.0   // Leste (Paraíba)
+            };
+            
+            // Regiões do Brasil (coordenadas aproximadas)
+            const REGIONS = {
+                southeast: { minLat: -25.5, maxLat: -14.5, minLon: -53.0, maxLon: -39.0, name: 'Sudeste' },
+                south: { minLat: -34.0, maxLat: -25.5, minLon: -58.0, maxLon: -48.0, name: 'Sul' },
+                northeast: { minLat: -16.0, maxLat: 5.5, minLon: -48.0, maxLon: -34.0, name: 'Nordeste' },
+                north: { minLat: -16.0, maxLat: 5.5, minLon: -74.0, maxLon: -48.0, name: 'Norte' },
+                centerwest: { minLat: -25.5, maxLat: -16.0, minLon: -62.0, maxLon: -48.0, name: 'Centro-Oeste' },
+                offshore: { lat: -22.5, lon: -40.5, radius: 300, name: 'Offshore' } // Bacia de Campos/Santos
+            };
+            
+            // Palavras-chave para identificar helicópteros
+            const HELICOPTER_KEYWORDS = [
+                'helicopter', 'heli', 'rotor', 'as350', 'h145', 'aw139', 
+                's76', 'bell', 'ec135', 'ec145', 'bk117', 'bo105', 'r44',
+                'r22', 'robinson', 'airbus helicopter', 'airbus helicóptero',
+                'esquilo', 'fennec', 'puma', 'super puma', 'black hawk',
+                'jayhawk', 'seahawk', 'osprey', 'kiowa', 'cayuse',
+                'essa', 'squirrel', 'colibri', 'eurocopter', 'md500',
+                'h225', 'h125', 'h130', 'a109', 'a119', 'koala',
+                'cabri', 'g2', 'g4', 'sikorsky', 'augusta', 'westland',
+                'bell 206', 'bell 412', 'uh-60', 'ch-47', 'chinook',
+                'hughes', 'enstrom', 'schweizer', 'brantly', 'hillberg'
+            ];
+            
+            // Operadoras de helicóptero conhecidas no Brasil
+            const HELI_OPERATORS = ['OMNI', 'LIDER', 'CHC', 'VAST', 'APUI', 'ROTA', 'SARA', 'TAXAERO', 'HELI', 'CBA', 'AEROMED'];
+            
+            // Estado da aplicação
+            let allHelicopters = [];
+            let filteredHelicopters = [];
+            let allAircraft = []; // Todos os dados da API (inclui aviões)
+            let lastUpdate = null;
+            let updateTimer = null;
+            let map = null;
+            let mapMarkers = [];
+            let apiStats = { total: 0, helicopters: 0 };
+            let fetchAttempts = 0; // Contador de tentativas
+            
+            // Elementos DOM
+            const tableBody = document.getElementById('tableBody');
+            const resultSpan = document.getElementById('resultCount');
+            const loadingEl = document.getElementById('loading');
+            const tableContainer = document.getElementById('tableContainer');
+            const mapContainer = document.getElementById('mapContainer');
+            const lastUpdateSpan = document.getElementById('lastUpdateTime');
+            const totalHelicoptersSpan = document.getElementById('totalHelicopters');
+            const withPositionSpan = document.getElementById('withPosition');
+            const totalOperatorsSpan = document.getElementById('totalOperators');
+            const inFlightSpan = document.getElementById('inFlight');
+            const activeFlightsBadge = document.getElementById('activeFlightsBadge');
+            const mapMarkersCount = document.getElementById('mapMarkersCount');
+            const totalAircraftSpan = document.getElementById('totalAircraft');
+            const apiStatusSpan = document.getElementById('apiStatus');
+            
+            // Filtros
+            const callsignFilter = document.getElementById('callsignFilter');
+            const modelFilter = document.getElementById('modelFilter');
+            const regionFilter = document.getElementById('regionFilter');
+            const altitudeFilter = document.getElementById('altitudeFilter');
+            const speedFilter = document.getElementById('speedFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            
+            // Modal de detalhes
+            const aircraftDetail = document.getElementById('aircraftDetail');
+            const detailTitle = document.getElementById('detailTitle');
+            const detailInfo = document.getElementById('detailInfo');
+            const detailExtra = document.getElementById('detailExtra');
+            const detailClose = document.getElementById('detailClose');
+            
+            // Função para criar timeout em promises
+            function fetchWithTimeout(url, options, timeout = FETCH_TIMEOUT) {
+                return Promise.race([
+                    fetch(url, options),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error(`Timeout após ${timeout/1000} segundos`)), timeout)
+                    )
+                ]);
+            }
+            
+            // Função para verificar se coordenada está no Brasil
+            function isInBrazil(lat, lon) {
+                if (!lat || !lon) return false;
+                return lat >= BRAZIL_BOUNDS.minLat && 
+                       lat <= BRAZIL_BOUNDS.maxLat && 
+                       lon >= BRAZIL_BOUNDS.minLon && 
+                       lon <= BRAZIL_BOUNDS.maxLon;
+            }
+            
+            // Função para determinar região do Brasil
+            function getRegion(lat, lon) {
+                if (!lat || !lon) return 'unknown';
+                
+                for (const [key, region] of Object.entries(REGIONS)) {
+                    if (key === 'offshore') {
+                        // Para offshore, calcula distância da Bacia de Campos/Santos
+                        const distance = Math.sqrt(
+                            Math.pow(lat - region.lat, 2) + 
+                            Math.pow(lon - region.lon, 2)
+                        ) * 111; // Aproximadamente km por grau
+                        if (distance < region.radius) return 'offshore';
+                    } else {
+                        if (lat >= region.minLat && lat <= region.maxLat && 
+                            lon >= region.minLon && lon <= region.maxLon) {
+                            return key;
+                        }
+                    }
+                }
+                return 'unknown';
+            }
+            
+            // Função para verificar se é helicóptero baseado nos dados
+            function isHelicopter(aircraft) {
+                // Verifica tipo/categoria primeiro (campo 'type' no formato ICAO)
+                if (aircraft.type) {
+                    const type = aircraft.type.toLowerCase();
+                    if (type === 'h' || type.includes('helicopter') || type.includes('rotor')) {
+                        return true;
+                    }
+                }
+                
+                // Verifica modelo (campo 't' - description)
+                if (aircraft.t) {
+                    const modelLower = aircraft.t.toLowerCase();
+                    if (HELICOPTER_KEYWORDS.some(keyword => modelLower.includes(keyword))) {
+                        return true;
+                    }
+                }
+                
+                // Verifica categoria (campo 'category')
+                if (aircraft.category) {
+                    const cat = aircraft.category.toLowerCase();
+                    if (cat === 'helicopter' || cat === 'h' || cat === 'rotorcraft') {
+                        return true;
+                    }
+                }
+                
+                // Verifica prefixo brasileiro (formato PR-H??, PT-H??, etc)
+                if (aircraft.flight) {
+                    const callsign = aircraft.flight.trim().toUpperCase();
+                    // Prefixos brasileiros de helicóptero: PR-H??, PT-H??, PP-H??, PU-H??
+                    if (/^P[RTPU]-H\w{2}/.test(callsign)) {
+                        return true;
+                    }
+                    // Operadoras conhecidas
+                    if (HELI_OPERATORS.some(op => callsign.startsWith(op))) {
+                        return true;
+                    }
+                }
+                
+                // Verifica ICAO type code (se disponível)
+                if (aircraft.icao_type) {
+                    const icaoType = aircraft.icao_type.toLowerCase();
+                    // Códigos ICAO comuns para helicópteros
+                    const icaoHeliCodes = ['h', 'r', 's', 'a'];
+                    if (icaoHeliCodes.includes(icaoType.charAt(0))) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            }
+            
+            // Função para buscar dados da API com timeout maior
+            async function fetchHelicopters() {
+                try {
+                    fetchAttempts++;
+                    loadingEl.style.display = 'block';
+                    tableContainer.style.opacity = '0.5';
+                    
+                    apiStatusSpan.innerHTML = `Tentativa ${fetchAttempts} - Aguardando resposta da API...`;
+                    
+                    // Usando fetch com timeout
+                    const response = await fetchWithTimeout(`${API_BASE_URL}/v2/aircraft/`, {}, FETCH_TIMEOUT);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data || !data.aircraft || !Array.isArray(data.aircraft)) {
+                        throw new Error('Formato de dados inválido');
+                    }
+                    
+                    // Reseta contador de tentativas em caso de sucesso
+                    fetchAttempts = 0;
+                    
+                    // Guarda todos os dados
+                    allAircraft = data.aircraft;
+                    apiStats.total = allAircraft.length;
+                    
+                    // Filtra apenas helicópteros
+                    const helicopters = allAircraft.filter(ac => isHelicopter(ac));
+                    
+                    apiStats.helicopters = helicopters.length;
+                    totalAircraftSpan.textContent = allAircraft.length;
+                    
+                    // Filtra apenas os que estão no Brasil (quando têm posição)
+                    const helicoptersInBrazil = helicopters.filter(ac => {
+                        if (ac.lat && ac.lon) {
+                            return isInBrazil(ac.lat, ac.lon);
+                        }
+                        // Se não tem posição, mantém (podem estar no Brasil)
+                        return true;
+                    });
+                    
+                    allHelicopters = helicoptersInBrazil;
+                    lastUpdate = new Date();
+                    
+                    // Adiciona informação de região para cada helicóptero
+                    allHelicopters.forEach(ac => {
+                        if (ac.lat && ac.lon) {
+                            ac.region = getRegion(ac.lat, ac.lon);
+                            
+                            // Adiciona altitude numérica para filtros
+                            if (ac.alt_baro && ac.alt_baro !== 'ground') {
+                                ac.altitude_num = parseInt(ac.alt_baro) || 0;
+                            } else {
+                                ac.altitude_num = 0;
+                            }
+                            
+                            // Adiciona velocidade numérica
+                            ac.speed_num = ac.gs || 0;
+                        } else {
+                            ac.region = 'unknown';
+                            ac.altitude_num = 0;
+                            ac.speed_num = 0;
+                        }
+                        
+                        // Formata callsign
+                        if (ac.flight) {
+                            ac.flight = ac.flight.trim();
+                        }
+                    });
+                    
+                    // Atualiza estatísticas da API
+                    apiStatusSpan.innerHTML = `✅ API: ${allAircraft.length} aeronaves totais, ${helicopters.length} helicópteros, ${helicoptersInBrazil.length} no Brasil`;
+                    
+                    updateStats();
+                    applyFilters();
+                    
+                } catch (error) {
+                    console.error('Erro ao buscar dados:', error);
+                    
+                    let errorMessage = error.message;
+                    if (error.message.includes('Timeout')) {
+                        errorMessage = 'Tempo limite excedido. A API pode estar lenta. Tentando novamente...';
+                    }
+                    
+                    tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:40px; color: #dc3545;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                        <p>Erro ao carregar dados: ${errorMessage}</p>
+                        <p style="margin-top: 10px;"><button class="btn btn-primary" onclick="window.location.reload()">Tentar novamente</button></p>
+                    </td></tr>`;
+                    
+                    apiStatusSpan.innerHTML = `❌ Erro: ${error.message} (tentativa ${fetchAttempts})`;
+                    
+                    // Se for timeout, agenda uma nova tentativa automática após 10 segundos
+                    if (error.message.includes('Timeout') && fetchAttempts < 3) {
+                        setTimeout(() => {
+                            fetchHelicopters();
+                        }, 10000); // Tenta novamente após 10 segundos
+                    }
+                } finally {
+                    loadingEl.style.display = 'none';
+                    tableContainer.style.opacity = '1';
+                }
+            }
+            
+            // Atualiza estatísticas
+            function updateStats() {
+                const total = allHelicopters.length;
+                const withPos = allHelicopters.filter(ac => ac.lat && ac.lon).length;
+                const inFlight = allHelicopters.filter(ac => ac.altitude_num > 0).length;
+                
+                // Operadoras únicas
+                const operators = new Set();
+                allHelicopters.forEach(ac => {
+                    if (ac.flight) {
+                        // Pega as primeiras letras do callsign como operadora
+                        const op = ac.flight.replace(/[0-9]/g, '').substring(0, 4);
+                        if (op.length > 1) operators.add(op);
+                    }
+                    // Também considera operador explícito
+                    if (ac.ownOp) operators.add(ac.ownOp);
+                });
+                
+                totalHelicoptersSpan.textContent = total;
+                withPositionSpan.textContent = withPos;
+                totalOperatorsSpan.textContent = operators.size;
+                inFlightSpan.textContent = inFlight;
+                
+                activeFlightsBadge.innerHTML = `<i class="fas fa-satellite-dish"></i> ${total} helicópteros no Brasil`;
+                
+                if (lastUpdate) {
+                    const timeStr = lastUpdate.toLocaleTimeString('pt-BR');
+                    lastUpdateSpan.textContent = timeStr;
+                }
+            }
+            
+            // Aplica filtros
+            function applyFilters() {
+                const callsign = callsignFilter.value.trim().toUpperCase();
+                const model = modelFilter.value;
+                const region = regionFilter.value;
+                const altitude = altitudeFilter.value;
+                const speed = speedFilter.value;
+                const status = statusFilter.value;
+                
+                filteredHelicopters = allHelicopters.filter(ac => {
+                    // Filtro por callsign
+                    if (callsign && (!ac.flight || !ac.flight.toUpperCase().includes(callsign))) {
+                        return false;
+                    }
+                    
+                    // Filtro por modelo
+                    if (model && (!ac.t || !ac.t.toLowerCase().includes(model.toLowerCase()))) {
+                        return false;
+                    }
+                    
+                    // Filtro por região
+                    if (region && region !== '' && ac.region !== region) {
+                        return false;
+                    }
+                    
+                    // Filtro por altitude
+                    const alt = ac.altitude_num;
+                    if (altitude === 'ground' && alt !== 0) return false;
+                    if (altitude === 'low' && (alt <= 0 || alt > 1000)) return false;
+                    if (altitude === 'medium' && (alt < 1000 || alt > 5000)) return false;
+                    if (altitude === 'high' && alt < 5000) return false;
+                    
+                    // Filtro por velocidade
+                    const gs = ac.speed_num;
+                    if (speed === 'hover' && gs > 5) return false;
+                    if (speed === 'slow' && (gs < 5 || gs > 50)) return false;
+                    if (speed === 'cruise' && (gs < 50 || gs > 120)) return false;
+                    if (speed === 'fast' && gs < 120) return false;
+                    
+                    // Filtro por status
+                    const isFlying = ac.altitude_num > 0;
+                    if (status === 'flying' && !isFlying) return false;
+                    if (status === 'ground' && isFlying) return false;
+                    
+                    return true;
+                });
+                
+                updateTable();
+                updateMap();
+            }
+            
+            // Formata altitude
+            function formatAltitude(ac) {
+                if (ac.alt_baro && ac.alt_baro !== 'ground') {
+                    return `${ac.alt_baro} ft`;
+                }
+                return 'Em solo';
+            }
+            
+            // Formata velocidade
+            function formatSpeed(ac) {
+                if (ac.gs) {
+                    return `${ac.gs} kt`;
+                }
+                return 'N/A';
+            }
+            
+            // Formata posição
+            function formatPosition(ac) {
+                if (ac.lat && ac.lon) {
+                    return `${ac.lat.toFixed(4)}°, ${ac.lon.toFixed(4)}°`;
+                }
+                return 'N/A';
+            }
+            
+            // Formata região
+            function formatRegion(ac) {
+                if (ac.region && ac.region !== 'unknown') {
+                    return REGIONS[ac.region]?.name || ac.region;
+                }
+                return 'Não identificada';
+            }
+            
+            // Formata status
+            function formatStatus(ac) {
+                if (ac.altitude_num > 0) {
+                    return '<span class="flight-status status-flying"><i class="fas fa-helicopter"></i> Em voo</span>';
+                }
+                return '<span class="flight-status status-ground"><i class="fas fa-ground"></i> Em solo</span>';
+            }
+            
+            // Mostra detalhes da aeronave
+            function showAircraftDetails(ac) {
+                detailTitle.textContent = ac.flight || 'Aeronave sem identificação';
+                
+                let html = '';
+                
+                // Linha 1
+                html += '<div class="detail-item">';
+                html += '<div class="detail-label">ICAO 24-bit</div>';
+                html += `<div class="detail-value detail-icao">${ac.hex || 'N/A'}</div>`;
+                html += '</div>';
+                
+                html += '<div class="detail-item">';
+                html += '<div class="detail-label">Modelo</div>';
+                html += `<div class="detail-value">${ac.t || 'Desconhecido'}</div>`;
+                html += '</div>';
+                
+                // Linha 2
+                html += '<div class="detail-item">';
+                html += '<div class="detail-label">Operadora</div>';
+                html += `<div class="detail-value">${ac.ownOp || (ac.flight ? ac.flight.substring(0, 4) : 'N/A')}</div>`;
+                html += '</div>';
+                
+                html += '<div class="detail-item">';
+                html += '<div class="detail-label">Categoria</div>';
+                html += `<div class="detail-value">${ac.category || 'N/A'}</div>`;
+                html += '</div>';
+                
+                // Linha 3
+                html += '<div class="detail-item">';
+                html += '<div class="detail-label">Altitude</div>';
+                html += `<div class="detail-value">${formatAltitude(ac)}</div>`;
+                html += '</div>';
+                
+                html += '<div class="detail-item">';
+                html += '<div class="detail-label">Velocidade</div>';
+                html += `<div class="detail-value">${formatSpeed(ac)}</div>`;
+                html += '</div>';
+                
+                // Linha 4
+                html += '<div class="detail-item">';
+                html += '<div class="detail-label">Direção</div>';
+                html += `<div class="detail-value">${ac.track ? ac.track + '°' : 'N/A'}</div>`;
+                html += '</div>';
+                
+                html += '<div class="detail-item">';
+                html += '<div class="detail-label">Taxa de subida</div>';
+                html += `<div class="detail-value">${ac.baro_rate ? ac.baro_rate + ' ft/min' : 'N/A'}</div>`;
+                html += '</div>';
+                
+                detailInfo.innerHTML = html;
+                
+                // Informações adicionais
+                let extra = '';
+                
+                if (ac.lat && ac.lon) {
+                    extra += `<p><strong>Posição:</strong> ${ac.lat.toFixed(6)}°, ${ac.lon.toFixed(6)}°</p>`;
+                    extra += `<p><strong>Região:</strong> ${formatRegion(ac)}</p>`;
+                }
+                
+                if (ac.squawk) {
+                    extra += `<p><strong>Squawk:</strong> ${ac.squawk}</p>`;
+                }
+                
+                if (ac.r) {
+                    extra += `<p><strong>Rota:</strong> ${ac.r}</p>`;
+                }
+                
+                if (ac.messages) {
+                    extra += `<p><strong>Mensagens:</strong> ${ac.messages}</p>`;
+                }
+                
+                extra += `<p><strong>Última atualização:</strong> ${lastUpdate ? lastUpdate.toLocaleString('pt-BR') : 'N/A'}</p>`;
+                
+                detailExtra.innerHTML = extra;
+                
+                aircraftDetail.style.display = 'flex';
+            }
+            
+            // Atualiza tabela com dados filtrados
+            function updateTable() {
+                tableBody.innerHTML = '';
+                resultSpan.textContent = `(${filteredHelicopters.length})`;
+                
+                if (filteredHelicopters.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:40px;">Nenhum helicóptero encontrado no Brasil com os filtros selecionados.</td></tr>';
+                    return;
+                }
+                
+                filteredHelicopters.slice(0, 50).forEach(ac => {
+                    const row = document.createElement('tr');
+                    row.className = 'clickable-row';
+                    
+                    const callsign = ac.flight || 'N/A';
+                    const icao = ac.hex || 'N/A';
+                    const model = ac.t || 'Desconhecido';
+                    const operator = ac.ownOp || (ac.flight ? ac.flight.substring(0, 4) : 'N/A');
+                    
+                    const altitude = formatAltitude(ac);
+                    const speed = formatSpeed(ac);
+                    const track = ac.track ? `${ac.track}°` : 'N/A';
+                    const position = formatPosition(ac);
+                    const region = formatRegion(ac);
+                    const status = formatStatus(ac);
+                    
+                    row.innerHTML = `
+                        <td><strong>${callsign}</strong></td>
+                        <td><code>${icao}</code></td>
+                        <td>${model}</td>
+                        <td>${operator}</td>
+                        <td>${altitude}</td>
+                        <td>${speed}</td>
+                        <td>${track}</td>
+                        <td><small>${position}</small></td>
+                        <td>${region}</td>
+                        <td>${status}</td>
+                    `;
+                    
+                    row.addEventListener('click', () => showAircraftDetails(ac));
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                if (filteredHelicopters.length > 50) {
+                    const more = document.createElement('tr');
+                    more.innerHTML = `<td colspan="10" style="text-align:center; background: #f9f9f9;"><i class="fas fa-ellipsis-h"></i> Mais ${filteredHelicopters.length - 50} helicópteros ocultos. Refine os filtros para visualizar.</td>`;
+                    tableBody.appendChild(more);
+                }
+            }
+            
+            // Inicializa mapa
+            function initMap() {
+                if (map) return;
+                
+                map = L.map('map').setView([-14.2350, -51.9253], 4); // Centro do Brasil
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+                
+                // Adiciona limite do Brasil
+                const bounds = L.latLngBounds(
+                    [BRAZIL_BOUNDS.minLat, BRAZIL_BOUNDS.minLon],
+                    [BRAZIL_BOUNDS.maxLat, BRAZIL_BOUNDS.maxLon]
+                );
+                L.rectangle(bounds, {
+                    color: "#002776",
+                    weight: 2,
+                    fill: false,
+                    dashArray: '5, 5'
+                }).addTo(map).bindTooltip('Espaço Aéreo Brasileiro', { permanent: false });
+                
+                // Adiciona marcadores de regiões
+                for (const [key, region] of Object.entries(REGIONS)) {
+                    if (key !== 'offshore' && region.minLat && region.maxLat) {
+                        const centerLat = (region.minLat + region.maxLat) / 2;
+                        const centerLon = (region.minLon + region.maxLon) / 2;
+                        L.marker([centerLat, centerLon], {
+                            icon: L.divIcon({
+                                html: `<div style="background: var(--brazil-blue); color: white; padding: 4px 8px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 2px solid white;">${region.name}</div>`,
+                                className: 'region-label',
+                                iconSize: [80, 30]
+                            })
+                        }).addTo(map);
+                    }
+                }
+            }
+            
+            // Atualiza mapa com marcadores
+            function updateMap() {
+                if (!map) return;
+                
+                // Remove marcadores antigos
+                mapMarkers.forEach(marker => marker.remove());
+                mapMarkers = [];
+                
+                // Adiciona novos marcadores
+                const withPosition = filteredHelicopters.filter(ac => ac.lat && ac.lon);
+                mapMarkersCount.textContent = withPosition.length;
+                
+                withPosition.forEach(ac => {
+                    const isFlying = ac.altitude_num > 0;
+                    
+                    // Cria ícone personalizado
+                    const icon = L.divIcon({
+                        html: `<div style="background: ${isFlying ? '#28a745' : '#6c757d'}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                            <i class="fas fa-helicopter" style="color: white; font-size: 16px;"></i>
+                        </div>`,
+                        className: 'helicopter-marker',
+                        iconSize: [30, 30],
+                        popupAnchor: [0, -15]
+                    });
+                    
+                    const marker = L.marker([ac.lat, ac.lon], { icon }).addTo(map);
+                    
+                    const callsign = ac.flight || 'N/A';
+                    const model = ac.t || 'Desconhecido';
+                    const alt = formatAltitude(ac);
+                    const speed = formatSpeed(ac);
+                    
+                    marker.bindPopup(`
+                        <b>${callsign}</b><br>
+                        Modelo: ${model}<br>
+                        Altitude: ${alt}<br>
+                        Velocidade: ${speed}<br>
+                        <small>ICAO: ${ac.hex}</small><br>
+                        <button onclick="window.showAircraftDetails('${ac.hex}')" style="margin-top: 8px; padding: 4px 8px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">Ver detalhes</button>
+                    `);
+                    
+                    marker.on('popupopen', function() {
+                        // Adiciona listener ao botão quando o popup abrir
+                        setTimeout(() => {
+                            const btn = document.querySelector('.leaflet-popup-content button');
+                            if (btn) {
+                                btn.onclick = () => showAircraftDetails(ac);
+                            }
+                        }, 100);
+                    });
+                    
+                    mapMarkers.push(marker);
+                });
+            }
+            
+            // Função global para mostrar detalhes (para o mapa)
+            window.showAircraftDetails = function(hex) {
+                const ac = allHelicopters.find(a => a.hex === hex);
+                if (ac) showAircraftDetails(ac);
+            };
+            
+            // Event listeners
+            document.getElementById('searchBtn').addEventListener('click', applyFilters);
+            
+            document.getElementById('clearBtn').addEventListener('click', function() {
+                callsignFilter.value = '';
+                modelFilter.value = '';
+                regionFilter.value = '';
+                altitudeFilter.value = 'all';
+                speedFilter.value = 'all';
+                statusFilter.value = 'all';
+                applyFilters();
+            });
+            
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                fetchHelicopters();
+            });
+            
+            document.getElementById('fitBrazilBtn').addEventListener('click', function() {
+                if (map) {
+                    map.setView([-14.2350, -51.9253], 4);
+                }
+            });
+            
+            // Troca de visualização
+            document.getElementById('gridViewBtn').addEventListener('click', function() {
+                tableContainer.style.display = 'block';
+                mapContainer.style.display = 'none';
+                document.getElementById('gridViewBtn').classList.add('active');
+                document.getElementById('mapViewBtn').classList.remove('active');
+            });
+            
+            document.getElementById('mapViewBtn').addEventListener('click', function() {
+                tableContainer.style.display = 'none';
+                mapContainer.style.display = 'block';
+                document.getElementById('mapViewBtn').classList.add('active');
+                document.getElementById('gridViewBtn').classList.remove('active');
+                
+                if (!map) {
+                    initMap();
+                    setTimeout(updateMap, 100);
+                } else {
+                    updateMap();
+                }
+            });
+            
+            // Fechar modal
+            detailClose.addEventListener('click', function() {
+                aircraftDetail.style.display = 'none';
+            });
+            
+            window.addEventListener('click', function(e) {
+                if (e.target === aircraftDetail) {
+                    aircraftDetail.style.display = 'none';
+                }
+            });
+            
+            // Atualização automática
+            function startAutoUpdate() {
+                if (updateTimer) clearInterval(updateTimer);
+                updateTimer = setInterval(fetchHelicopters, UPDATE_INTERVAL);
+            }
+            
+            // Carrega dados iniciais
+            fetchHelicopters();
+            startAutoUpdate();
+            
+            // Enter no campo de callsign
+            callsignFilter.addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') applyFilters();
+            });
+            
+            // Tecla ESC fecha modal
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    aircraftDetail.style.display = 'none';
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
